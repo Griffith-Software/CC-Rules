@@ -1,0 +1,28 @@
+{
+  "name": "cc-rules",
+  "displayName": "CC Rules",
+  "version": "1.0.0",
+  "description": "Rules for Claude Code that you can see and edit: Markdown checklists at three levels (every chat, each project, one chat), kept in step with renamed chats and projects, managed with /rules.",
+  "author": {
+    "name": "Griffith Software"
+  },
+  "homepage": "https://github.com/Griffith-Software/CC-Rules",
+  "repository": "https://github.com/Griffith-Software/CC-Rules",
+  "license": "SEE LICENSE IN LICENSE",
+  "types": "./types/index.d.ts",
+  "keywords": [
+    "rules",
+    "instructions",
+    "checklist",
+    "markdown",
+    "session-start"
+  ],
+  "userConfig": {
+    "node_path": {
+      "type": "string",
+      "title": "Node.js path",
+      "description": "Full path to node (node.exe on Windows), or the folder it's in. Leave empty to use the node on PATH.",
+      "required": false
+    }
+  }
+}

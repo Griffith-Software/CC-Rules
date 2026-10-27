@@ -1,0 +1,15 @@
+{
+  "name": "cc-rules",
+  "owner": {
+    "name": "Griffith Software"
+  },
+  "description": "Griffith Software's CC Rules plugin for Claude Code.",
+  "plugins": [
+    {
+      "name": "cc-rules",
+      "source": "./",
+      "description": "Rules for Claude Code that you can see and edit: Markdown checklists at three levels (every chat, each project, one chat), kept in step with renamed chats and projects, managed with /rules.",
+      "version": "1.0.0"
+    }
+  ]
+}

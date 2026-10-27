@@ -1,0 +1,2 @@
+# The hooks run run-node.sh with sh, which fails on Windows line endings.
+*.sh text eol=lf
