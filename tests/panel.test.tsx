@@ -13,7 +13,7 @@ const VIEW = {
       label: 'global rules',
       file: 'C:/x/GLOBAL.md',
       exists: true,
-      rules: [{ id: 'R1', active: true, text: 'Always answer in plain English' }],
+      rules: [{ id: 'GR1', active: true, text: 'Always answer in plain English' }],
     },
     { level: 'project', label: 'project "Apps"', file: 'C:/x/projects/Apps.md', exists: false, rules: [] },
     {
@@ -21,10 +21,10 @@ const VIEW = {
       label: 'this chat',
       file: 'C:/x/chats/Fix login bug.md',
       exists: true,
-      rules: [{ id: 'R2', active: false, text: 'Keep replies short' }],
+      rules: [{ id: 'CR1', active: false, text: 'Keep replies short' }],
     },
   ],
-  notices: ['Gave the new rule on line 3 of GLOBAL.md the ID R1: Always answer in plain English'],
+  notices: ['Gave the new rule on line 3 of GLOBAL.md the ID GR1: Always answer in plain English'],
   watch: [],
 }
 
@@ -81,7 +81,7 @@ function fakeRules(on: On, runs: string[][], scan: object = SCAN) {
       ? JSON.stringify(scan)
       : e.argv.includes('--json')
         ? JSON.stringify(VIEW)
-        : 'Paused R1 in global rules: Always answer in plain English\n'
+        : 'Paused GR1 in global rules: Always answer in plain English\n'
     return { value: { exitCode: 0, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
   })
 }
@@ -97,8 +97,11 @@ test('the panel shows all three levels on every surface that docks it', async ($
     expect(await ui.find({ text: 'This chat · Fix login bug' })).toBeDefined()
     expect(await ui.find({ text: 'Always answer in plain English' })).toBeDefined()
     expect(await ui.find({ text: 'No rules yet.' })).toBeDefined()
-    expect((await ui.find({ key: 'toggle-R1' }))?.text).toBe('Pause')
-    expect((await ui.find({ key: 'toggle-R2' }))?.text).toBe('Resume')
+    expect((await ui.find({ key: 'toggle-GR1' }))?.text).toBe('Pause')
+    expect((await ui.find({ key: 'toggle-CR1' }))?.text).toBe('Resume')
+    for (const key of ['row-GR1', 'row-CR1']) {
+      expect((await ui.find({ key }))?.props).toEqual(expect.objectContaining({ borderStyle: 'round', borderDimColor: true }))
+    }
     expect(await ui.find({ text: /Note: Gave the new rule/ })).toBeDefined()
     await ui.unmount()
   }
@@ -112,9 +115,9 @@ test('Pause runs the rules tool without telling the snapshot, then refreshes', a
   await $.command.run({ command: 'rules', args: '' })
   const ui = await $.ui.mount({ plugin: 'cc-rules', surface: 'desktop', ...PANE })
   const before = runs.length
-  await ui.press({ key: 'toggle-R1' })
+  await ui.press({ key: 'toggle-GR1' })
   const after = runs.slice(before)
-  expect(after[0]).toEqual(expect.arrayContaining(['pause', 'R1', '--no-snapshot']))
+  expect(after[0]).toEqual(expect.arrayContaining(['pause', 'GR1', '--no-snapshot']))
   expect(after[1]).toEqual(expect.arrayContaining(['list', '--json']))
   await ui.unmount()
 })
@@ -148,6 +151,7 @@ test('Find hidden rules lists them by file, each with its own list and a Remove 
     'Keep it where it is',
   ])
   expect((await ui.find({ key: 'remove-H333333' }))?.text).toBe('Remove')
+  expect((await ui.find({ key: 'hidden-H333333' }))?.props.borderStyle).toBe('round')
   expect(await ui.find({ key: 'hidden-target' })).toBeUndefined()
   await ui.unmount()
 })
@@ -204,6 +208,7 @@ test('on Claude Code 2.1.299 and later the panel uses the new text styles', asyn
   // The engine reads weight and bold as one, so the heading size tells them apart.
   expect(heading?.props.size).toBe('heading')
   expect(heading?.props.weight).toBe('semibold')
+  expect((await ui.find({ key: 'row-GR1' }))?.props.paddingX).toBe('sm')
   await ui.unmount()
 })
 
@@ -212,6 +217,8 @@ test('on an older Claude Code the panel falls back to bold, which it still knows
   const heading = await ui.find({ type: 'Text', text: 'Global · every chat' })
   expect(heading?.props.bold).toBe(true)
   expect(heading?.props.size).toBeUndefined()
+  // Spacing steps are 2.1.299's too, so the box padding is in cells.
+  expect((await ui.find({ key: 'row-GR1' }))?.props.paddingX).toBe(1)
   await ui.unmount()
 })
 
@@ -240,7 +247,7 @@ test('/rules on its own opens the panel by either of its names, without Claude',
 test('/rules with anything after it goes on to the skill, as does any other command', async ($, on) => {
   fakeRules(on, [])
   on('command.run', async (_$, e) => ({ text: `ran ${e.command} ${e.args}` }))
-  expect((await $.command.run({ command: 'rules', args: 'pause R3' })).text).toBe('ran rules pause R3')
+  expect((await $.command.run({ command: 'rules', args: 'pause GR3' })).text).toBe('ran rules pause GR3')
   expect((await $.command.run({ command: 'cc-rules:rules', args: 'list' })).text).toBe('ran cc-rules:rules list')
   expect((await $.command.run({ command: 'compact', args: '' })).text).toBe('ran compact ')
 })

@@ -1,7 +1,7 @@
 ---
 name: rules
-description: Show and change the user's visible chat rules (CC Rules plugin; typed on its own, /rules opens the CC Rules panel), at three levels - global (every chat), project (every chat in this project) and this chat. Use when the user says "make a rule for this chat", "make a rule for this project" or "make a rule for every chat" / "add a global rule", asks to add, edit, remove, pause, resume or move a rule, refers to a rule by ID such as R3, asks what rules are active, asks to reload the rules, or asks to find hidden, stray or leftover rules (in CLAUDE.md files, Claude's memory or rules files) and move them into CC Rules or clean them out.
-argument-hint: "[list | add <rule> | add --level project|global <rule> | edit R3 <text> | remove R3 | pause R3 | resume R3 | move R3 --to global|project|chat]"
+description: Show and change the user's visible chat rules (CC Rules plugin; typed on its own, /rules opens the CC Rules panel), at three levels - global (every chat), project (every chat in this project) and this chat. Use when the user says "make a rule for this chat", "make a rule for this project" or "make a rule for every chat" / "add a global rule", asks to add, edit, remove, pause, resume or move a rule, refers to a rule by ID such as GR3, PR2 or CR1, asks what rules are active, asks to reload the rules, or asks to find hidden, stray or leftover rules (in CLAUDE.md files, Claude's memory or rules files) and move them into CC Rules or clean them out.
+argument-hint: "[list | add <rule> | add --level project|global <rule> | edit GR3 <text> | remove GR3 | pause GR3 | resume GR3 | move CR3 --to global|project|chat]"
 ---
 
 # CC Rules
@@ -20,14 +20,17 @@ runs in. Project and chat files are linked to the group's or chat's ID, so when 
 group, the file is renamed to match and the rules stay. Filing the chat under another group switches its project
 rules. This chat's session ID is `${CLAUDE_SESSION_ID}`.
 
-Each rule is one checklist line with an ID that's never reused, for example `- [x] R3: Always answer in plain English`.
-`[x]` means active and `[ ]` means paused. A rule keeps its ID when it moves between levels.
+Each rule is one checklist line, for example `- [x] GR3: Always answer in plain English`. `[x]` means active and
+`[ ]` means paused. The ID is the level's letters and the rule's place in its file, counted from the top: GR for
+global, PR for project, CR for this chat. When a rule is removed or moved, the rules after it move up a number, and a
+moved rule takes the next ID at its new level. So use the IDs from the latest `list` or rules context. An ID with no
+level letters (`R3` or `3`) means a global rule. IDs from before CC Rules 1.1.0 looked like `R3` at every level.
 
 ## Running the tool
 
 Make every change with the CC Rules tool. Don't edit the rule files with Write or Edit. The tool re-reads
-every file from disk on every run, so it sees the user's hand edits. It also gives hand-added rules an ID, keeps
-file names in step with renamed groups and chats, and changes only the line it needs to.
+every file from disk on every run, so it sees the user's hand edits. It also gives hand-added rules an ID, keeps the
+IDs in order, keeps file names in step with renamed groups and chats, and changes only the lines it needs to.
 
 The "CC Rules" context gives the full command line for this chat. It looks like this:
 
@@ -58,15 +61,16 @@ In PowerShell, start the command line with `& ` and pass the text as `--text 'Al
 | "make a rule for this chat: X", `/rules add X` | `add --level chat --stdin` (this chat is the default) |
 | "make a rule for this project: X", "...for this group" | `add --level project --stdin` |
 | "make a rule for every chat: X", "add a global rule", "...everywhere" | `add --level global --stdin` |
-| "change R3 to X" | `edit R3 --stdin` |
-| "delete R3", "remove R3" | `remove R3` |
-| "pause R3", "turn off R3" | `pause R3` |
-| "resume R3", "turn R3 back on" | `resume R3` |
-| "make R3 global", "make R3 a project rule", "move R3 to this chat" | `move R3 --to global`, `--to project` or `--to chat` |
+| "change GR3 to X" | `edit GR3 --stdin` |
+| "delete GR3", "remove GR3" | `remove GR3` |
+| "pause GR3", "turn off GR3" | `pause GR3` |
+| "resume GR3", "turn GR3 back on" | `resume GR3` |
+| "make CR3 global", "make CR3 a project rule", "move PR3 to this chat" | `move CR3 --to global`, `--to project` or `--to chat` |
 | "reload the rules", "I edited the file" | `list` |
 | "find hidden rules", "tidy up my rules", "what rules are in my CLAUDE.md files?" | `scan`, then see Finding hidden rules |
 
-`pause`, `resume`, `remove` and `move` accept several IDs at once. Use `add --paused` to add a rule switched off.
+`pause`, `resume`, `remove` and `move` accept several IDs at once. Pass them as the user saw them: `remove` and `move`
+check every ID before changing anything and renumber only at the end. Use `add --paused` to add a rule switched off.
 If the chat has no name yet when you create its file, add `--title "<3 to 6 words on what this chat is about>"`.
 The file is renamed to the chat's real name once it has one.
 
@@ -76,7 +80,7 @@ The file is renamed to the chat's real name once it has one.
    replaces any rule list you were given earlier in the chat.
 2. **Check for conflicts.** For `add`, `edit`, `resume` and `move`, compare the new or changed rule with
    every *active* rule at all three levels. If it contradicts one (for example, the new rule "Reply in French"
-   against R1 "Always answer in plain English"), make no change yet. Tell the user which rule it clashes
+   against GR1 "Always answer in plain English"), make no change yet. Tell the user which rule it clashes
    with, quote both with their levels, and ask which wins:
    - keep the existing rule and drop the new one
    - use the new rule and pause the existing one
@@ -89,8 +93,9 @@ The file is renamed to the chat's real name once it has one.
    unsure, ask.
 3. **Make the change** with the command from the table.
 4. **Echo it back.** Show the user the tool's confirmation line exactly as printed, for example
-   `Added R4 to this chat: Always answer in plain English`. Pass on any `Note:` lines too, because they
-   report renamed files, hand-added rules that got IDs, and lines that aren't rules.
+   `Added CR4 to this chat: Always answer in plain English`. Pass on any "renumbered" line, which says which IDs
+   changed, and any `Note:` lines, because they report renamed files, hand-added rules that got IDs, and lines that
+   aren't rules.
 5. **Follow the new rules** from your next action on: newly active rules apply at once, and paused or
    removed rules stop applying.
 

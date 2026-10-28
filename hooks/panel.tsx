@@ -44,10 +44,21 @@ function textStylesFor(version: string): boolean {
   return major !== 2 ? major > 2 : minor !== 1 ? minor > 1 : patch >= 299
 }
 
+// `card` is the thin box around each rule, so rules that wrap onto several
+// lines don't run into each other; `cardGap` is the space between boxes.
 function looks(modern: boolean) {
+  const border = { borderStyle: 'round', borderDimColor: true } as const
   return modern
-    ? { heading: { size: 'heading', weight: 'semibold' }, id: { weight: 'semibold', tabular: true }, gap: 'md', rowGap: 'sm', error: 'error' } as const
-    : { heading: { bold: true }, id: { bold: true }, gap: 1, rowGap: 1, error: 'red' } as const
+    ? {
+        heading: { size: 'heading', weight: 'semibold' },
+        id: { weight: 'semibold', tabular: true },
+        gap: 'md',
+        rowGap: 'sm',
+        card: { ...border, paddingX: 'sm' },
+        cardGap: 'xs',
+        error: 'error',
+      } as const
+    : { heading: { bold: true }, id: { bold: true }, gap: 1, rowGap: 1, card: { ...border, paddingX: 1 }, cardGap: 0, error: 'red' } as const
 }
 
 // The plugin's "Node.js path" option: the program itself or the folder it's
@@ -280,14 +291,14 @@ export const register: Register = (on, options) => {
     return (
       <Box flexDirection="column" gap={look.gap}>
         {data.levels.map(level => (
-          <Box key={`level-${level.level}`} flexDirection="column">
+          <Box key={`level-${level.level}`} flexDirection="column" gap={look.cardGap}>
             <Box flexDirection="row" justifyContent="space-between">
               <Text {...look.heading}>{heading(level, data)}</Text>
               <Markdown key={`file-${level.level}`} text={fileLink(level)} dimColor />
             </Box>
             {level.rules.length === 0 && <Text dimColor>  No rules yet.</Text>}
             {level.rules.map(rule => (
-              <Box key={`row-${rule.id}`} flexDirection="row" gap={look.rowGap}>
+              <Box key={`row-${rule.id}`} flexDirection="row" gap={look.rowGap} {...look.card}>
                 <Text dimColor={!rule.active}>{rule.active ? '●' : '○'}</Text>
                 <Text {...look.id} dimColor={!rule.active}>
                   {rule.id}
@@ -335,7 +346,7 @@ export const register: Register = (on, options) => {
             {skipped(found) && <Text dimColor>Not listed: {skipped(found)}.</Text>}
             {found.items.length === 0 && <Text dimColor>No hidden rules found.</Text>}
             {byFile(found.items).map(([label, items], index) => (
-              <Box key={`hidden-file-${index}`} flexDirection="column">
+              <Box key={`hidden-file-${index}`} flexDirection="column" gap={look.cardGap}>
                 <Box flexDirection="row" justifyContent="space-between">
                   <Text {...look.id}>{label}</Text>
                   <Button
@@ -352,7 +363,7 @@ export const register: Register = (on, options) => {
                   />
                 </Box>
                 {items.map(item => (
-                  <Box key={`hidden-${item.id}`} flexDirection="column">
+                  <Box key={`hidden-${item.id}`} flexDirection="column" {...look.card}>
                     <Text dimColor>
                       {item.section ? `under "${item.section}" · ` : ''}line {item.line}
                     </Text>

@@ -6,8 +6,11 @@
 //   project  every chat in a project
 //   chat     this chat only          lowest
 //
-// Each rule is one checklist line with an ID that is never reused:
-//   - [x] R3: Always answer in plain English     ([x] active, [ ] paused)
+// Each rule is one checklist line. Its ID is its level's letters and its
+// place in the file, counted from the top:
+//   - [x] GR3: Always answer in plain English    ([x] active, [ ] paused)
+// GR is global, PR project and CR chat. Removing or moving a rule closes the
+// gap, so each level's numbers always run 1, 2, 3...
 //
 // Every load reads the files fresh from disk, so hand edits are always seen.
 // Project and chat files carry a "Linked to ..." line with the group's or
@@ -21,13 +24,15 @@ const { RulesError, checkSessionId } = require('./where');
 const LEVELS = ['global', 'project', 'chat']; // highest first
 const GLOBAL_FILE = 'GLOBAL.md';
 const FOLDER_FILE = path.join('.claude', 'cc-rules', 'PROJECT.md');
-const NEXT_ID_FILE = '.next-id';
 const HEADINGS = { global: '# Global rules', project: '# Project rules', chat: '# Chat rules' };
+const PREFIX = { global: 'GR', project: 'PR', chat: 'CR' };
+const LEVEL_TITLE = { global: 'Global rules', project: 'Project rules', chat: "This chat's rules" };
 
-// "- [x] R3: text" -> indent, bullet, box, rest. "[]" counts as unchecked.
+// "- [x] GR3: text" -> indent, bullet, box, rest. "[]" counts as unchecked.
 const CHECKLIST_RE = /^(\s*)([-*+])\s+\[([ xX]?)\]\s*(.*)$/;
-// "R3:" at the start of the rest. Also accepts "R3 -", "R3.", "R3)" and "r3".
-const ID_RE = /^[Rr](\d+)\b[ \t]*[:.)–—-]?[ \t]*/;
+// "GR3:", "PR3:" or "CR3:" at the start of the rest, or "R3:" from before
+// 1.1.0. Also accepts "GR3 -", "GR3.", "GR3)" and "gr3".
+const ID_RE = /^([GgPpCc]?[Rr])(\d+)\b[ \t]*[:.)–—-]?[ \t]*/;
 const BULLET_RE = /^\s*[-*+]\s+\S/;
 const FENCE_RE = /^\s*(`{3,}|~{3,})/;
 const LINK_RE = /^Linked to (chat|project) (\S+?)\.?(?=\s|$)/m;
@@ -78,7 +83,7 @@ function scan(lines) {
       const text = (idMatch ? rest.slice(idMatch[0].length) : rest).trim();
       if (!text) return;
       rules.push({
-        id: idMatch ? `R${Number(idMatch[1])}` : null,
+        id: idMatch ? `${idMatch[1].toUpperCase()}${Number(idMatch[2])}` : null,
         active: box.toLowerCase() === 'x',
         text,
         index,
@@ -96,12 +101,52 @@ function ruleLine(rule) {
   return `${rule.indent || ''}${rule.bullet || '-'} [${rule.active ? 'x' : ' '}] ${rule.id}: ${rule.text}`;
 }
 
-function idNumber(id) {
-  return Number(id.slice(1));
+// Numbers a file's rules 1, 2, 3... from the top, so there are no gaps or
+// repeats. Returns { from, to, rule } for each rule whose ID changed; `from`
+// is null for a rule written by hand without one.
+function renumber(doc) {
+  const changed = [];
+  doc.rules.forEach((rule, i) => {
+    const id = `${PREFIX[doc.level]}${i + 1}`;
+    if (rule.id === id) return;
+    changed.push({ from: rule.id, to: id, rule });
+    rule.id = id;
+    doc.lines[rule.index] = ruleLine(rule);
+  });
+  return changed;
 }
 
-function highestId(rules) {
-  return rules.reduce((max, rule) => (rule.id ? Math.max(max, idNumber(rule.id)) : max), 0);
+// The ID the next rule added to the end of `doc` gets.
+function nextId(doc) {
+  return `${PREFIX[doc.level]}${doc.rules.length + 1}`;
+}
+
+// "Global rules renumbered: GR6–GR11 are now GR5–GR10." `pairs` are
+// [old ID, new ID] in file order; runs of consecutive numbers are joined.
+function renumberText(level, pairs) {
+  const split = (id) => {
+    const m = /^(\D*)(\d+)$/.exec(id);
+    return { letters: m[1], n: Number(m[2]) };
+  };
+  const runs = [];
+  for (const [from, to] of pairs) {
+    const a = split(from);
+    const b = split(to);
+    const run = runs[runs.length - 1];
+    if (run && run.a.letters === a.letters && run.b.letters === b.letters && a.n === run.a.end + 1 && b.n === run.b.end + 1) {
+      run.a.end = a.n;
+      run.b.end = b.n;
+    } else {
+      runs.push({ a: { ...a, end: a.n }, b: { ...b, end: b.n } });
+    }
+  }
+  const id = (x, n) => `${x.letters}${n}`;
+  const parts = runs.map(({ a, b }) =>
+    a.n === a.end
+      ? `${id(a, a.n)} is now ${id(b, b.n)}`
+      : `${id(a, a.n)}–${id(a, a.end)} are now ${id(b, b.n)}–${id(b, b.end)}`,
+  );
+  return `${LEVEL_TITLE[level]} renumbered: ${parts.join(', ')}.`;
 }
 
 // The group or chat ID on a file's "Linked to ..." line, if it has one.
@@ -297,8 +342,9 @@ function openDocs(state, hints) {
 
 // Reads the three files for a chat and tidies them:
 // - a renamed group or chat gets its file and heading renamed to match
-// - a rule the user added by hand without an ID gets the next free one
-// - a repeated ID (say, from a copied line) is replaced on the lower copy
+// - every rule's ID matches its level and place in the file, so a rule added
+//   by hand, a line removed or moved by hand, or a copied line can't leave a
+//   gap or a repeat (the check before each message tells Claude what moved)
 // What changed is listed in state.notices, with any warnings from `where`.
 // `hints` are the file paths that matched last time, to save a folder scan.
 function load(where, { hints = {} } = {}) {
@@ -360,27 +406,12 @@ function fileLabel(doc) {
 }
 
 function repair(state) {
-  const seen = new Set();
   for (const doc of docs(state)) {
-    let changed = false;
-    for (const rule of doc.rules) {
-      if (rule.id && !seen.has(rule.id)) {
-        seen.add(rule.id);
-        continue;
-      }
-      const oldId = rule.id;
-      rule.id = allocateId(state);
-      seen.add(rule.id);
-      doc.lines[rule.index] = ruleLine(rule);
-      changed = true;
-      const where = `line ${rule.index + 1} of ${fileLabel(doc)}`;
-      state.notices.push(
-        oldId
-          ? `${oldId} was used twice, so the copy on ${where} is now ${rule.id}: ${rule.text}`
-          : `Gave the new rule on ${where} the ID ${rule.id}: ${rule.text}`,
-      );
+    const changed = renumber(doc);
+    for (const { from, to, rule } of changed) {
+      if (!from) state.notices.push(`Gave the new rule on line ${rule.index + 1} of ${fileLabel(doc)} the ID ${to}: ${rule.text}`);
     }
-    if (changed) trySave(state, doc);
+    if (changed.length) trySave(state, doc);
   }
   for (const doc of docs(state)) {
     for (const line of doc.skipped) {
@@ -389,45 +420,6 @@ function repair(state) {
       );
     }
   }
-}
-
-function highestIdInDir(dir) {
-  let names = [];
-  try {
-    names = fs.readdirSync(dir);
-  } catch {
-    return 0;
-  }
-  let max = 0;
-  for (const name of names) {
-    if (!name.endsWith('.md')) continue;
-    try {
-      max = Math.max(max, highestId(parse(fs.readFileSync(path.join(dir, name), 'utf8')).rules));
-    } catch {
-      // An unreadable file can't hold an ID we'd clash with in practice.
-    }
-  }
-  return max;
-}
-
-// IDs come from one counter for every level, project and chat on this
-// machine, so a rule keeps its ID when it moves and an ID is never reused.
-// The counter can't fall behind an ID that's already in a file.
-function allocateId(state) {
-  const { home } = state.where;
-  const counterFile = path.join(home, NEXT_ID_FILE);
-  let max = 0;
-  for (const doc of docs(state)) max = Math.max(max, highestId(doc.rules));
-  for (const sub of ['', 'projects', 'chats']) max = Math.max(max, highestIdInDir(path.join(home, sub)));
-  const counter = parseInt(readText(counterFile) || '0', 10) || 0;
-  const next = Math.max(counter, max + 1);
-  try {
-    fs.mkdirSync(home, { recursive: true });
-    fs.writeFileSync(counterFile, `${next + 1}\n`);
-  } catch {
-    // The files themselves still keep IDs unique; the counter only stops reuse.
-  }
-  return `R${next}`;
 }
 
 function levelDoc(state, level) {
@@ -446,19 +438,21 @@ function rank(doc) {
   return LEVELS.indexOf(doc.level);
 }
 
+// "GR3", "gr3" and "G3" are GR3; PR and CR likewise. With no level letter
+// ("R3" or "3") it's a global rule.
 function normaliseId(raw) {
-  const m = /^\s*[Rr]?(\d+)\s*$/.exec(String(raw ?? ''));
-  if (!m) throw new RulesError(`"${raw ?? ''}" isn't a rule ID. IDs look like R3.`);
-  return `R${Number(m[1])}`;
+  const m = /^\s*([GgPpCc])?[Rr]?(\d+)\s*$/.exec(String(raw ?? ''));
+  if (!m) {
+    throw new RulesError(`"${raw ?? ''}" isn't a rule ID. IDs look like GR3 (global), PR3 (project) or CR3 (this chat).`);
+  }
+  return `${(m[1] || 'G').toUpperCase()}R${Number(m[2])}`;
 }
 
 function find(state, raw) {
   const id = normaliseId(raw);
   const hit = allRules(state).find(({ rule }) => rule.id === id);
   if (hit) return hit;
-  const ids = allRules(state)
-    .sort((a, b) => idNumber(a.rule.id) - idNumber(b.rule.id))
-    .map(({ doc, rule }) => `${rule.id} (${doc.label})`);
+  const ids = allRules(state).map(({ doc, rule }) => `${rule.id} (${doc.label})`);
   const known = ids.length ? `Rules are: ${ids.join(', ')}.` : 'There are no rules yet.';
   const chatNote = state.chat ? '' : " This chat's rules weren't checked (no session ID).";
   throw new RulesError(`There's no rule ${id}. ${known}${chatNote}`);
@@ -513,7 +507,7 @@ function addRule(state, { level = 'chat', text, active = true, title } = {}) {
     doc.name = name;
     doc.file = freePath(path.dirname(doc.file), fileName(name));
   }
-  const rule = { id: allocateId(state), active, text };
+  const rule = { id: nextId(doc), active, text };
   insert(state, doc, rule);
   save(doc);
   return `Added ${rule.id} to ${doc.label}${active ? '' : ' (paused)'}: ${text}${created(doc, wasNew)}`;
@@ -543,23 +537,66 @@ function editRule(state, raw, text) {
   return `Edited ${rule.id} in ${doc.label}: ${text} (was: ${old})`;
 }
 
-function removeRule(state, raw) {
-  const { doc, rule } = find(state, raw);
+// Closes the gaps that removed and moved rules left, and says which IDs
+// changed.
+function settle(state) {
+  const out = [];
+  for (const doc of docs(state)) {
+    const changed = renumber(doc);
+    if (!changed.length) continue;
+    save(doc);
+    out.push(renumberText(doc.level, changed.map(({ from, to }) => [from, to])));
+  }
+  return out;
+}
+
+// Applies `change` to several rules. Every ID is checked before anything
+// changes, and the numbers close up only at the end, so "remove GR2 GR5"
+// removes the two rules the user saw as GR2 and GR5.
+function each(state, raws, change) {
+  const ids = [...new Set(raws.map(normaliseId))];
+  for (const id of ids) find(state, id);
+  return [...ids.map((id) => change(state, id)), ...settle(state)].join('\n');
+}
+
+function removeOne(state, id) {
+  const { doc, rule } = find(state, id);
   doc.lines.splice(rule.index, 1);
   rescan(doc);
   save(doc);
   return `Removed ${rule.id} from ${doc.label}: ${rule.text}`;
 }
 
-// Takes rule `id` out of one rules file, wherever it is; for undoing a move
-// into CC Rules. True if it was there.
-function removeFromFile(file, id) {
-  const doc = readRuleFile(file, null, '');
-  const rule = doc.rules.find((r) => r.id === id);
-  if (!rule) return false;
+function removeRules(state, ids) {
+  return each(state, ids, removeOne);
+}
+
+function removeRule(state, raw) {
+  return removeRules(state, [raw]);
+}
+
+// A rules file's level, from where it lives (see where.js).
+function levelOfFile(file) {
+  const dir = path.basename(path.dirname(file));
+  if (dir === 'chats') return 'chat';
+  if (dir === 'projects' || path.basename(file) === 'PROJECT.md') return 'project';
+  return 'global';
+}
+
+// Takes a rule out of one rules file, wherever it is; for undoing a move into
+// CC Rules. It's found by its text, since its number may have changed since.
+// Returns its ID and any renumbering, or null if it isn't there any more.
+function removeFromFile(file, text) {
+  const level = levelOfFile(file);
+  const doc = readRuleFile(file, level, '');
+  const rule = doc.rules.find((r) => sameText(r.text, text));
+  if (!rule) return null;
   doc.lines.splice(rule.index, 1);
+  rescan(doc);
+  const changed = renumber(doc);
   save(doc);
-  return true;
+  const renumbered = changed.length ? renumberText(level, changed.map(({ from, to }) => [from, to])) : '';
+  return { id: rule.id, renumbered };
 }
 
 function setActive(state, raw, active) {
@@ -581,20 +618,31 @@ function moveEffect(from, to) {
     : `Every chat in ${to.label} now gets it.`;
 }
 
-function moveRule(state, raw, level) {
-  const { doc: from, rule } = find(state, raw);
+// A moved rule takes the next ID at its new level, at the end of that file.
+function moveOne(state, id, level) {
+  const { doc: from, rule } = find(state, id);
   const to = levelDoc(state, level);
   if (to === from) return `${rule.id} is already in ${to.label}: ${rule.text}`;
   from.lines.splice(rule.index, 1);
   rescan(from);
   const wasNew = !to.exists;
-  insert(state, to, { id: rule.id, active: rule.active, text: rule.text });
+  const newId = nextId(to);
+  insert(state, to, { id: newId, active: rule.active, text: rule.text });
   // Destination first: if the second write fails, the rule is in both files
-  // and the next load renumbers the lower copy instead of losing it.
+  // rather than lost.
   save(to);
   save(from);
   const paused = rule.active ? '' : ' (paused)';
-  return `Moved ${rule.id} from ${from.label} to ${to.label}${paused}: ${rule.text}\n${moveEffect(from, to)}${created(to, wasNew)}`;
+  return `Moved ${rule.id} from ${from.label} to ${to.label} as ${newId}${paused}: ${rule.text}\n${moveEffect(from, to)}${created(to, wasNew)}`;
+}
+
+function moveRules(state, ids, level) {
+  levelDoc(state, level);
+  return each(state, ids, (s, id) => moveOne(s, id, level));
+}
+
+function moveRule(state, raw, level) {
+  return moveRules(state, [raw], level);
 }
 
 // --- Views -----------------------------------------------------------------
@@ -742,9 +790,12 @@ module.exports = {
   addRule,
   editRule,
   removeRule,
+  removeRules,
   removeFromFile,
   setActive,
   moveRule,
+  moveRules,
+  renumberText,
   listText,
   summaryText,
   contextText,

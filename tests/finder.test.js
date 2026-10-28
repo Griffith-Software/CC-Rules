@@ -82,7 +82,7 @@ test('every place rules hide is searched, and skipped folders and CC Rules itsel
   write(path.join(w.root, 'Site', 'node_modules', 'pkg', 'CLAUDE.md'), '- Never seen.\n');
   write(path.join(w.root, 'a', 'b', 'c', 'd', 'CLAUDE.md'), '- Too deep to look at.\n');
   write(path.join(w.root, '.claude', 'chat-rules', 'PROJECT.md'), '- [x] R4: Use metric units\n');
-  write(path.join(w.root, '.claude', 'cc-rules', 'PROJECT.md'), '- [x] R5: Already in CC Rules\n');
+  write(path.join(w.root, '.claude', 'cc-rules', 'PROJECT.md'), '- [x] PR1: Already in CC Rules\n');
   write(path.join(memoryDir(w), 'feedback-x.md'), '---\nname: x\ndescription: d\nmetadata:\n  type: feedback\n---\n\nNever add AI credits to commits.\n\n**Why:** asked.\n');
   write(path.join(memoryDir(w), 'project-y.md'), '---\nname: y\ndescription: d\nmetadata:\n  type: project\n---\n\nNever mind, a project note.\n');
   const found = scanned(w);
@@ -106,23 +106,39 @@ test('move into CC Rules takes the rule out of its file, with a backup; undo put
   write(file, original);
   const [first] = scanned(w).items;
   const said = adoptTo(w, first.id, 'global');
-  assert.match(said, /^Added R1 to global rules: Ask before deleting files\.\nTook it out of CLAUDE\.md\. A backup is kept/);
+  assert.match(said, /^Added GR1 to global rules: Ask before deleting files\.\nTook it out of CLAUDE\.md\. A backup is kept/);
   assert.equal(read(file), '# Notes\n\n- Keep commits small and focused.\n\nThe app uses SQLite.\n');
-  assert.match(read(w.global), /- \[x\] R1: Ask before deleting files\.\n$/);
+  assert.match(read(w.global), /- \[x\] GR1: Ask before deleting files\.\n$/);
   assert.equal(fs.readdirSync(path.join(w.home, '.backups')).length, 1);
 
-  assert.equal(finder.undo(where(w), rulebook.removeFromFile), 'Undid the move of "Ask before deleting files.": put CLAUDE.md back and took R1 back out of CC Rules.');
+  assert.equal(finder.undo(where(w), rulebook.removeFromFile), 'Undid the move of "Ask before deleting files.": put CLAUDE.md back and took GR1 back out of CC Rules.');
   assert.equal(read(file), original);
-  assert.ok(!read(w.global).includes('R1'));
+  assert.ok(!read(w.global).includes('Ask before deleting files'));
   assert.throws(() => finder.undo(where(w), rulebook.removeFromFile), /Nothing to undo/);
+});
+
+test('undo finds the moved rule by its wording after the numbers have changed', (t) => {
+  const w = world(t);
+  write(path.join(w.root, 'CLAUDE.md'), '- Ask before deleting files.\n');
+  write(w.global, '- [x] GR1: One\n');
+  const [item] = scanned(w).items;
+  assert.match(adoptTo(w, item.id, 'global'), /^Added GR2 to global rules: Ask before deleting files\./);
+  rulebook.addRule(load(w), { level: 'global', text: 'Later' });
+  rulebook.removeRule(load(w), 'GR1');
+  assert.equal(read(w.global), '- [x] GR1: Ask before deleting files.\n- [x] GR2: Later\n');
+  assert.equal(
+    finder.undo(where(w), rulebook.removeFromFile),
+    'Undid the move of "Ask before deleting files.": put CLAUDE.md back and took GR1 back out of CC Rules.\nGlobal rules renumbered: GR2 is now GR1.',
+  );
+  assert.equal(read(w.global), '- [x] GR1: Later\n');
 });
 
 test('a rule that reached CC Rules after the scan is only taken out of its file', (t) => {
   const w = world(t);
   write(path.join(w.root, 'CLAUDE.md'), '- Ask before deleting files.\n');
   const [item] = scanned(w).items;
-  write(w.global, '- [x] R1: Ask before deleting files.\n');
-  assert.match(adoptTo(w, item.id), /^Already in CC Rules: R1 in global rules already says that\.\nTook it out of CLAUDE\.md/);
+  write(w.global, '- [x] GR1: Ask before deleting files.\n');
+  assert.match(adoptTo(w, item.id), /^Already in CC Rules: GR1 in global rules already says that\.\nTook it out of CLAUDE\.md/);
   assert.equal(read(path.join(w.root, 'CLAUDE.md')), '');
 });
 
@@ -133,8 +149,8 @@ test('a hidden rule can go to another sidebar group', (t) => {
   const [item] = scanned(w).items;
   const r = cli(w, ['adopt', item.id, '--to', 'group:Websites']);
   assert.equal(r.code, 0, r.err);
-  assert.match(r.out, /^Added R1 to project "Websites": No third-party scripts\./);
-  assert.match(read(path.join(w.projects, 'Websites.md')), /Linked to project cg-web\.[\s\S]*- \[x\] R1: No third-party scripts\./);
+  assert.match(r.out, /^Added PR1 to project "Websites": No third-party scripts\./);
+  assert.match(read(path.join(w.projects, 'Websites.md')), /Linked to project cg-web\.[\s\S]*- \[x\] PR1: No third-party scripts\./);
   const bad = cli(w, ['adopt', 'H000000', '--to', 'group:Nowhere']);
   assert.equal(bad.code, 1);
   assert.match(bad.err, /No sidebar group "Nowhere"\. Groups: Apps, Websites\./);
@@ -193,8 +209,8 @@ test('scan --json gives the panel the rules and where they can go', (t) => {
 
 test('rules CC Rules already has are left out of the scan', (t) => {
   const w = world(t);
-  write(w.global, '- [x] R1: One rule here\n');
-  write(path.join(w.chats, 'Other.md'), 'Linked to chat other.\n- [ ] R2: A paused chat rule.\n');
+  write(w.global, '- [x] GR1: One rule here\n');
+  write(path.join(w.chats, 'Other.md'), 'Linked to chat other.\n- [ ] CR1: A paused chat rule.\n');
   write(path.join(w.root, 'rules.md'), '- One rule here.\n- A paused chat rule\n- A new rule here.\n');
   const found = scanned(w);
   assert.deepEqual(texts(found), ['A new rule here.']);
@@ -241,8 +257,8 @@ test('adopt --to session:<id> gives the rule to another chat; --to keep keeps it
   const [first, second] = scanned(w).items;
   const r = cli(w, ['adopt', first.id, '--to', 'session:other-chat']);
   assert.equal(r.code, 0, r.err);
-  assert.match(r.out, /^Added R1 to chat "Site work": Show the diff before pushing\.\nTook it out of rules\.md/);
-  assert.match(read(path.join(w.chats, 'Site work.md')), /^# Chat rules: Site work\n[\s\S]*Linked to chat other-chat\.[\s\S]*- \[x\] R1: Show the diff before pushing\.\n$/);
+  assert.match(r.out, /^Added CR1 to chat "Site work": Show the diff before pushing\.\nTook it out of rules\.md/);
+  assert.match(read(path.join(w.chats, 'Site work.md')), /^# Chat rules: Site work\n[\s\S]*Linked to chat other-chat\.[\s\S]*- \[x\] CR1: Show the diff before pushing\.\n$/);
   const kept = cli(w, ['adopt', second.id, '--to', 'keep']);
   assert.match(kept.out, /^Kept in rules\.md, and it won't be listed again: Keep commits small\./);
   assert.equal(read(path.join(w.root, 'rules.md')), '- Keep commits small.\n');

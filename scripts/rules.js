@@ -33,6 +33,10 @@ Commands:
   move <ID>... --to global|project|chat
   context                       the text Claude gets when a chat starts
 
+IDs show the level and the rule's place in its file: GR3 is the third global
+rule, PR3 the third project rule, CR3 the third chat rule. Removing or moving
+a rule closes the gap, and a moved rule gets the next ID at its new level.
+
 Hidden rules (rules outside CC Rules, in CLAUDE.md files, .claude/rules,
 Claude's memory, files named *rules*.md and old Chat Rules files):
   scan                          list them, each with an ID like H1a2b3c
@@ -112,7 +116,7 @@ function ruleText(opts, words) {
   return words.join(' ');
 }
 
-function needIds(ids, command, example = "R3") {
+function needIds(ids, command, example = 'GR3') {
   if (!ids.length) throw new RulesError(`Which rule? Example: ${command} ${example}`);
   return ids;
 }
@@ -254,7 +258,7 @@ function run(argv, env = process.env) {
     case 'remove':
     case 'rm':
     case 'delete':
-      output = withNotes(needIds(rest, 'remove').map((id) => rulebook.removeRule(state, id)));
+      output = withNotes([rulebook.removeRules(state, needIds(rest, 'remove'))]);
       break;
     case 'pause':
       output = withNotes(needIds(rest, 'pause').map((id) => rulebook.setActive(state, id, false)));
@@ -263,12 +267,12 @@ function run(argv, env = process.env) {
       output = withNotes(needIds(rest, 'resume').map((id) => rulebook.setActive(state, id, true)));
       break;
     case 'move': {
-      // Accepts "move R3 --to project" and "move R3 to project".
+      // Accepts "move GR3 --to project" and "move GR3 to project".
       const ids = rest.filter((w) => !/^to$/i.test(w) && !TARGET_RE.test(w));
       const target = opts.to || rest.find((w) => TARGET_RE.test(w));
       if (!target) throw new RulesError('Move it where? Add --to global, --to project or --to chat.');
       const level = parseLevel(target);
-      output = withNotes(needIds(ids, 'move').map((id) => rulebook.moveRule(state, id, level)));
+      output = withNotes([rulebook.moveRules(state, needIds(ids, 'move'), level)]);
       break;
     }
     case 'scan': {

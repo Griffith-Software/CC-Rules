@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.1.0 (2026-10-28)
+
+- **Each level numbers its own rules.** IDs now show the level: GR1, GR2... for global rules, PR1, PR2... for
+  project rules and CR1, CR2... for chat rules. Each file counts from 1, so a rule in one project no longer leaves a
+  gap in your global numbers.
+- **No gaps.** IDs follow the order of the lines in the file. Remove or move a rule, or delete a line by hand, and
+  the rules after it move up a number. The confirmation says which IDs changed (`Global rules renumbered: GR3–GR5
+  are now GR2–GR4.`), and so does the check before your next message in every other open chat.
+- A moved rule gets the next ID at its new level: `Moved CR1 from this chat to global rules as GR5`.
+- `remove` and `move` with several IDs check them all before changing anything, and each ID means the rule you saw
+  under it.
+- **Undo last change** in Find hidden rules finds the moved rule by its wording, so it takes out the right rule
+  even after the numbers have changed.
+- An ID without the level letters (`R3` or `3`) means a global rule.
+- Rules from 1.0.0 (`R3` at every level) get their new IDs the first time each file is read. Open chats are told
+  which IDs changed, for example `Global rules renumbered: R1–R10 are now GR1–GR10, R12 is now GR11.`
+- The shared ID counter (`~/.claude/cc-rules/.next-id`) is no longer used.
+- **Panel: each rule sits in a thin box**, so rules that wrap onto several lines no longer run together like
+  paragraphs. Hidden rules found by Find hidden rules get the same box.
+
 ## 1.0.0 (2026-10-27)
 
 First public release. It works the same as 0.8.0.

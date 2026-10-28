@@ -7,13 +7,15 @@ say "make a rule for this chat", Claude updates that list and tells you exactly 
 ```markdown
 # Global rules
 
-- [x] R1: Always answer in plain English
-- [ ] R2: Use British spelling
-- [x] R5: Show the command before running anything that deletes files
+- [x] GR1: Always answer in plain English
+- [ ] GR2: Use British spelling
+- [x] GR3: Show the command before running anything that deletes files
 ```
 
-`[x]` means the rule is active and `[ ]` means it's paused. Each rule has an ID (R1, R2...) that never changes and is
-never reused, even when the rule moves to another level.
+`[x]` means the rule is active and `[ ]` means it's paused. Each rule's ID shows its level and its place in the file:
+GR1, GR2... for global rules, PR1, PR2... for project rules and CR1, CR2... for chat rules. Remove or move a rule and
+the ones after it move up a number, so the numbers always run 1, 2, 3 with no gaps. CC Rules tells you and Claude
+whenever an ID changes.
 
 **Where it works:** Claude Code only. That means the terminal, the IDE extensions and the desktop app's Code tab. It
 doesn't run in the desktop app's Chat or Cowork modes or on claude.ai: Chat ignores plugin hooks, and Cowork runs them
@@ -57,9 +59,9 @@ When a chat starts, Claude Code shows a short list of the active rules:
 
 ```
 CC Rules: 3 active
-  R1 (global) Always answer in plain English
-  R3 (project) Use metric units
-  R4 (this chat) Keep replies under 200 words
+  GR1 (global) Always answer in plain English
+  PR1 (project) Use metric units
+  CR1 (this chat) Keep replies under 200 words
 1 paused · project: Apps · /rules to see or change them
 ```
 
@@ -70,8 +72,16 @@ rules and you see what changed:
 ```
 CC Rules updated:
   This chat is now in project "Websites".
-  R7 (project) now applies: Mobile first
-  R3 (project) no longer applies
+  PR1 (project) now applies: Mobile first
+  PR1 (project) no longer applies: Use metric units
+```
+
+After you delete a line by hand, it looks like this:
+
+```
+CC Rules updated:
+  GR2 (global) no longer applies: Use British spelling
+  Global rules renumbered: GR3–GR5 are now GR2–GR4.
 ```
 
 When nothing changed, it stays silent. The check takes a fraction of a second.
@@ -83,15 +93,23 @@ at all three levels:
 
 ```
 Global · every chat                                   open file
- ●  R1  Always answer in plain English                 [Pause]
- ○  R2  Use British spelling                           [Resume]
+╭──────────────────────────────────────────────────────╮
+│ ●  GR1  Always answer in plain English      [Pause]  │
+╰──────────────────────────────────────────────────────╯
+╭──────────────────────────────────────────────────────╮
+│ ○  GR2  Use British spelling                [Resume] │
+╰──────────────────────────────────────────────────────╯
 
 Project · Apps (sidebar group)                        no file yet
  No rules yet.
 
 This chat · Fix login bug                             open file
- ●  R4  Keep replies under 200 words                   [Pause]
+╭──────────────────────────────────────────────────────╮
+│ ●  CR1  Keep replies under 200 words        [Pause]  │
+╰──────────────────────────────────────────────────────╯
 ```
+
+Each rule sits in its own thin box, so long rules that wrap onto several lines stay easy to tell apart.
 
 - It opens by itself when a chat starts. If you close it, it stays closed in later chats until you type `/rules`
   on its own, which opens it again.
@@ -151,17 +169,18 @@ Just ask in your own words, or use `/rules` (also available as `/cc-rules:rules`
 
 | You say | What happens |
 | --- | --- |
-| "make a rule for this chat: keep replies under 200 words" | `Added R4 to this chat: Keep replies under 200 words` |
-| "make a rule for this project: use metric units" | `Added R3 to project "Apps": Use metric units` |
-| "make a rule for every chat: always answer in plain English" | `Added R1 to global rules: Always answer in plain English` |
+| "make a rule for this chat: keep replies under 200 words" | `Added CR1 to this chat: Keep replies under 200 words` |
+| "make a rule for this project: use metric units" | `Added PR1 to project "Apps": Use metric units` |
+| "make a rule for every chat: always answer in plain English" | `Added GR1 to global rules: Always answer in plain English` |
 | `/rules` on its own | opens the panel (or, where the panel can't run, the table below) |
 | `/rules list` or "what rules are active?" | a table of every rule with its ID, level and status, and where the files are |
-| "change R4 to under 300 words" | `Edited R4 in this chat: ... (was: ...)` |
-| "pause R2", "resume R2" | `Paused R2 in global rules: ...` |
-| "remove R4" | `Removed R4 from this chat: ...` |
-| "make R4 global", "move R3 to this chat" | `Moved R4 from this chat to global rules: ...` |
+| "change CR1 to under 300 words" | `Edited CR1 in this chat: ... (was: ...)` |
+| "pause GR2", "resume GR2" | `Paused GR2 in global rules: ...` |
+| "remove GR2" | `Removed GR2 from global rules: ...`, then `Global rules renumbered: GR3–GR5 are now GR2–GR4.` |
+| "make CR1 global", "move PR1 to this chat" | `Moved CR1 from this chat to global rules as GR5: ...` |
 
-"Make a rule" with no level means this chat. Every change is echoed back with its ID and level.
+"Make a rule" with no level means this chat. Every change is echoed back with its ID and level, along with any IDs
+that changed. An ID without the level letters (`R3` or `3`) means a global rule.
 
 **Conflicts.** Before adding, editing, resuming or moving a rule, Claude re-reads every file and compares the rule with
 the active rules at all three levels. If it contradicts one, Claude makes no change yet. It shows you both rules and
@@ -171,11 +190,12 @@ Exact duplicates are refused outright, with a pointer to the existing rule.
 
 ## Editing the files by hand
 
-- One rule per checklist line: `- [x] R3: text`. Also accepted: `*` or `+` bullets, `[X]`, `[]` (paused), `R3 -`,
-  `R3.` and lowercase `r3`. When Claude next changes that line, it rewrites it as `- [x] R3: text`.
-- Add a rule without an ID (`- [x] Always cite sources`) and it gets the next free ID at the next message. You'll see
-  a note saying so.
-- If you copy a line and end up with the same ID twice, the copy at the lower level (or further down) gets a new ID.
+- One rule per checklist line: `- [x] GR3: text`. Also accepted: `*` or `+` bullets, `[X]`, `[]` (paused), `GR3 -`,
+  `GR3.` and lowercase `gr3`. When Claude next changes that line, it rewrites it as `- [x] GR3: text`.
+- IDs follow the order of the lines. Add a rule without an ID (`- [x] Always cite sources`), delete a line, move lines
+  around or copy one, and at the next message every rule gets the ID for its place in the file. You'll see a note for
+  a rule that got its first ID, and Claude is told which IDs changed.
+- IDs from before 1.1.0 (`R3` at every level) are changed to the new kind the first time each file is read.
 - A plain bullet with no box (`- Always cite sources`) isn't a rule. CC Rules points it out so you can add the box.
 - Lines inside code blocks and `<!-- comments -->` are ignored. Your headings, notes and blank lines are never
   touched, except that a heading starting `# Project rules` or `# Chat rules` is kept in step with the name.
@@ -274,7 +294,8 @@ node scripts/rules.js [--root DIR] [--session ID] <command> [args]
 ```
 
 Rule text can also come from `--text "..."` or `--stdin`. `--root` is the chat's folder and `--session` its session
-ID. Every command re-reads the files first. Errors exit with code 1 and a plain message.
+ID. Every command re-reads the files first. Errors exit with code 1 and a plain message. `remove` and `move` check
+every ID before changing anything, so `remove GR2 GR5` removes the two rules you saw as GR2 and GR5.
 
 ## How it works
 
@@ -294,7 +315,8 @@ ID. Every command re-reads the files first. Errors exit with code 1 and a plain 
 | `scripts/lib/snapshot.js` | remembers what Claude was last told, in `~/.claude/cc-rules/.state/` |
 | `scripts/lib/finder.js` | finds hidden rules, and moves, removes, keeps and undoes them, with backups in `.backups/` |
 
-Rule IDs come from one counter, `~/.claude/cc-rules/.next-id`. It never falls behind an ID already in use.
+A rule's ID is worked out from its level and its place in the file each time the file is read, so there's no counter
+to keep in step.
 
 ## What it reads and changes
 
@@ -309,7 +331,7 @@ It reads:
   folder, the chat's folder, the folders above it and up to three levels below it; Claude's memory notes in
   `~/.claude/projects/*/memory/`; Markdown files with "rules" in the name; and files left over from Chat Rules
 
-It writes to `~/.claude/cc-rules/` (rule files, the ID counter, `.state/` with what Claude was last told in each chat,
+It writes to `~/.claude/cc-rules/` (rule files, `.state/` with what Claude was last told in each chat,
 and `.backups/`), and to `.claude/cc-rules/PROJECT.md` when you add a folder project rule. It changes a file anywhere
 else only when you move or remove a hidden rule: it backs the file up first, then takes the rule's line out (a memory
 note moves into the backup), and **Undo last change** puts it back. The panel also remembers whether you closed it,

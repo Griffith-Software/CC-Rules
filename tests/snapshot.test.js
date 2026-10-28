@@ -6,12 +6,17 @@ const path = require('node:path');
 const snapshot = require('../scripts/lib/snapshot');
 const { SESSION, world, desktopChat, load, write } = require('./helpers');
 
+const APPS = { kind: 'group', id: 'cg-apps', name: 'Apps' };
+const rule = (id, level, text, active = true) => ({ id, level, active, text });
+
 const base = {
-  project: { kind: 'group', id: 'cg-apps', name: 'Apps' },
+  project: APPS,
   rules: [
-    { id: 'R1', level: 'global', active: true, text: 'One' },
-    { id: 'R2', level: 'project', active: true, text: 'Two' },
-    { id: 'R3', level: 'chat', active: false, text: 'Three' },
+    rule('GR1', 'global', 'One'),
+    rule('GR2', 'global', 'Two'),
+    rule('GR3', 'global', 'Gone'),
+    rule('PR1', 'project', 'Proj'),
+    rule('CR1', 'chat', 'Three', false),
   ],
   notices: [],
 };
@@ -19,26 +24,53 @@ const base = {
 test('changes lists what is different, in plain words', () => {
   assert.deepEqual(snapshot.changes(base, base), []);
   const after = {
-    project: { kind: 'group', id: 'cg-web', name: 'Websites' },
+    project: APPS,
     rules: [
-      { id: 'R1', level: 'global', active: false, text: 'One, reworded' },
-      { id: 'R3', level: 'global', active: true, text: 'Three' },
-      { id: 'R5', level: 'project', active: true, text: 'Five' },
-      { id: 'R6', level: 'chat', active: false, text: 'Six' },
+      rule('GR1', 'global', 'One, reworded', false),
+      rule('GR2', 'global', 'Three'),
+      rule('GR3', 'global', 'Two'),
+      rule('PR1', 'project', 'Proj'),
+      rule('PR2', 'project', 'Five'),
+      rule('CR1', 'chat', 'Six', false),
     ],
   };
   assert.deepEqual(snapshot.changes(base, after), [
-    'This chat is now in project "Websites".',
-    'R1 (global) now says: One, reworded',
-    'R1 (global) paused',
-    'R3 moved from this chat to global',
-    'R3 (global) resumed',
-    'R5 (project) now applies: Five',
-    'R6 (this chat) was added, paused: Six',
-    'R2 (project) no longer applies',
+    'GR1 (global) now says: One, reworded',
+    'GR1 (global) paused',
+    'CR1 moved from this chat to global and is now GR2',
+    'GR2 (global) resumed',
+    'PR2 (project) now applies: Five',
+    'CR1 (this chat) was added, paused: Six',
+    'GR3 (global) no longer applies: Gone',
+    'Global rules renumbered: GR2 is now GR3.',
   ]);
-  const renamed = { ...base, project: { kind: 'group', id: 'cg-apps', name: 'Applications' } };
+  const renamed = { ...base, project: { ...APPS, name: 'Applications' } };
   assert.deepEqual(snapshot.changes(base, renamed), ['Project "Apps" is now called "Applications".']);
+});
+
+test('after a move to another project, the same ID is a different rule', () => {
+  const before = { project: APPS, rules: [rule('PR1', 'project', 'Apps rule')] };
+  const after = { project: { kind: 'group', id: 'cg-web', name: 'Websites' }, rules: [rule('PR1', 'project', 'Web rule')] };
+  assert.deepEqual(snapshot.changes(before, after), [
+    'This chat is now in project "Websites".',
+    'PR1 (project) now applies: Web rule',
+    'PR1 (project) no longer applies: Apps rule',
+  ]);
+});
+
+test('IDs from before 1.1.0 are reported as renumbered', () => {
+  const before = {
+    project: APPS,
+    rules: [rule('R1', 'global', 'One'), rule('R2', 'global', 'Two'), rule('R3', 'global', 'Three'), rule('R5', 'global', 'Five'), rule('R4', 'project', 'Proj')],
+  };
+  const after = {
+    project: APPS,
+    rules: [rule('GR1', 'global', 'One'), rule('GR2', 'global', 'Two'), rule('GR3', 'global', 'Three'), rule('GR4', 'global', 'Five'), rule('PR1', 'project', 'Proj')],
+  };
+  assert.deepEqual(snapshot.changes(before, after), [
+    'Global rules renumbered: R1–R3 are now GR1–GR3, R5 is now GR4.',
+    'Project rules renumbered: R4 is now PR1.',
+  ]);
 });
 
 test('newNotices skips notices that were already shown', () => {
@@ -49,11 +81,11 @@ test('newNotices skips notices that were already shown', () => {
 test('capture, write and read round-trip, and prune drops old snapshots', (t) => {
   const w = world(t);
   desktopChat(w, { title: 'Chat', group: 'cg-apps' });
-  write(w.global, '- [x] R1: One\n');
+  write(w.global, '- [x] GR1: One\n');
   const snap = snapshot.capture(load(w));
-  assert.deepEqual(snap.project, { kind: 'group', id: 'cg-apps', name: 'Apps' });
+  assert.deepEqual(snap.project, APPS);
   assert.equal(snap.chatTitle, 'Chat');
-  assert.deepEqual(snap.rules, [{ id: 'R1', level: 'global', active: true, text: 'One' }]);
+  assert.deepEqual(snap.rules, [rule('GR1', 'global', 'One')]);
   snapshot.write(w.home, SESSION, snap);
   assert.deepEqual(snapshot.read(w.home, SESSION), JSON.parse(JSON.stringify(snap)));
 

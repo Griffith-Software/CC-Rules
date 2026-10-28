@@ -40,7 +40,7 @@ const MODAL_RE =
 
 function cleanText(text) {
   return text
-    .replace(/^[Rr]\d+\s*[:.)-]\s*/, '') // an old Chat Rules ID
+    .replace(/^[GgPpCc]?[Rr]\d+\s*[:.)-]\s*/, '') // a CC Rules or old Chat Rules ID
     .replace(/\*\*|__/g, '')
     .replace(/\s+/g, ' ')
     .trim();
@@ -519,8 +519,8 @@ function keep(where, env, id) {
 function adopt(where, env, id, addRule) {
   const item = find(where, env, id);
   const added = addRule(item.text);
-  const ruleId = /^Added (R\d+) to /.exec(added.message);
-  if (!ruleId && !/^Not added: R\d+ in .* already says that/.test(added.message)) {
+  const ruleId = /^Added ([GPC]R\d+) to /.exec(added.message);
+  if (!ruleId && !/^Not added: [GPC]R\d+ in .* already says that/.test(added.message)) {
     throw new RulesError(added.message);
   }
   const backup = startBackup(where.home, { action: 'move', text: item.text, label: item.label });
@@ -530,8 +530,8 @@ function adopt(where, env, id, addRule) {
   return `${ruleId ? first : `Already in CC Rules: ${first.replace(/^Not added: /, '')}`}\nTook it out of ${item.label}. A backup is kept; "undo" puts it back.`;
 }
 
-// Puts back the latest change that hasn't been undone. `removeRule(file, id)`
-// takes a moved rule back out of CC Rules.
+// Puts back the latest change that hasn't been undone. `removeRule(file, text)`
+// takes a moved rule back out of CC Rules (rulebook.removeFromFile).
 function undo(where, removeRule) {
   const root = path.join(where.home, '.backups');
   const latest = listDir(root)
@@ -547,12 +547,17 @@ function undo(where, removeRule) {
     fs.copyFileSync(path.join(dir, file.copy), file.path);
   }
   let note = '';
+  let renumbered = '';
   if (manifest.ruleId && manifest.ruleFile) {
-    note = removeRule(manifest.ruleFile, manifest.ruleId) ? ` and took ${manifest.ruleId} back out of CC Rules` : '';
+    const out = removeRule(manifest.ruleFile, manifest.text);
+    if (out) {
+      note = ` and took ${out.id} back out of CC Rules`;
+      renumbered = out.renumbered ? `\n${out.renumbered}` : '';
+    }
   }
   fs.renameSync(dir, `${dir}.undone`);
   const what = manifest.action === 'move' ? 'the move of' : 'the removal of';
-  return `Undid ${what} "${manifest.text}": put ${manifest.label} back${note}.`;
+  return `Undid ${what} "${manifest.text}": put ${manifest.label} back${note}.${renumbered}`;
 }
 
 module.exports = { scan, suggest, adopt, clean, keep, undo, ruleLike };

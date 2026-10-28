@@ -5,7 +5,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { allRules } = require('./rulebook');
+const { allRules, renumberText } = require('./rulebook');
 
 const LEVEL_WORD = { global: 'global', project: 'project', chat: 'this chat' };
 
@@ -69,6 +69,28 @@ function prune(home, days = 30) {
   }
 }
 
+// Pairs each rule now with the rule it was before. IDs change when rules
+// above them go, so rules are matched by their wording first: at the same
+// level, then at any level (a move). A rule whose wording changed is matched
+// by its ID, unless the chat changed project, when the same ID is another
+// project's rule.
+function match(before, after) {
+  const left = [...before.rules];
+  const take = (test) => {
+    const i = left.findIndex(test);
+    return i === -1 ? null : left.splice(i, 1)[0];
+  };
+  const pairs = after.rules.map((rule) => ({ rule, was: take((r) => r.level === rule.level && r.text === rule.text) }));
+  for (const pair of pairs) if (!pair.was) pair.was = take((r) => r.text === pair.rule.text);
+  const sameProject = before.project.id === after.project.id;
+  for (const pair of pairs) {
+    const { rule } = pair;
+    if (pair.was || (rule.level === 'project' && !sameProject)) continue;
+    pair.was = take((r) => r.level === rule.level && r.id === rule.id);
+  }
+  return { pairs, gone: left };
+}
+
 // What changed between two snapshots, as lines for the user and Claude.
 function changes(before, after) {
   const out = [];
@@ -77,22 +99,24 @@ function changes(before, after) {
   } else if (before.project.name !== after.project.name) {
     out.push(`Project "${before.project.name}" is now called "${after.project.name}".`);
   }
-  const old = new Map(before.rules.map((rule) => [rule.id, rule]));
-  const now = new Set(after.rules.map((rule) => rule.id));
-  for (const rule of after.rules) {
-    const was = old.get(rule.id);
+  const { pairs, gone } = match(before, after);
+  const renumbered = { global: [], project: [], chat: [] };
+  for (const { rule, was } of pairs) {
     const level = LEVEL_WORD[rule.level];
     if (!was) {
       out.push(`${rule.id} (${level}) ${rule.active ? 'now applies' : 'was added, paused'}: ${rule.text}`);
       continue;
     }
-    if (was.level !== rule.level) out.push(`${rule.id} moved from ${LEVEL_WORD[was.level]} to ${level}`);
+    if (was.level !== rule.level) {
+      out.push(`${was.id} moved from ${LEVEL_WORD[was.level]} to ${level} and is now ${rule.id}`);
+    } else if (was.id !== rule.id) {
+      renumbered[rule.level].push([was.id, rule.id]);
+    }
     if (was.text !== rule.text) out.push(`${rule.id} (${level}) now says: ${rule.text}`);
     if (was.active !== rule.active) out.push(`${rule.id} (${level}) ${rule.active ? 'resumed' : 'paused'}`);
   }
-  for (const rule of before.rules) {
-    if (!now.has(rule.id)) out.push(`${rule.id} (${LEVEL_WORD[rule.level]}) no longer applies`);
-  }
+  for (const rule of gone) out.push(`${rule.id} (${LEVEL_WORD[rule.level]}) no longer applies: ${rule.text}`);
+  for (const [level, list] of Object.entries(renumbered)) if (list.length) out.push(renumberText(level, list));
   return out;
 }
 
