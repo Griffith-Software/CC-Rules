@@ -108,6 +108,32 @@ function hostRecordFile(dir, env) {
   return path.join(dir, SESSIONS, account, org, `${hostId}.json`);
 }
 
+// The record the app's variables name for this chat, or null. The app writes
+// a new chat's record a moment before it adds the chat's Claude Code session
+// ID, so a record with no session ID yet counts as this chat's.
+function hostRecord(dir, env, sessionId) {
+  if (env.CLAUDE_CODE_SESSION_ID !== sessionId) return null;
+  const file = hostRecordFile(dir, env);
+  if (!file) return null;
+  try {
+    const record = JSON.parse(fs.readFileSync(file, 'utf8'));
+    if (!record || typeof record !== 'object') return null;
+    const cli = record.cliSessionId;
+    if (cli !== sessionId && cli !== undefined && cli !== null && cli !== '') return null;
+    return { file, record: { sessionId: env.CLAUDE_CODE_HOST_SESSION_ID, ...record } };
+  } catch {
+    return null;
+  }
+}
+
+// True for a brand-new chat whose record the app hasn't written yet: the
+// app's folder for it is there, so nothing has moved, and the check before
+// the next message finds the record.
+function recordNotWrittenYet(dir, env, sessionId) {
+  const file = dir && env.CLAUDE_CODE_SESSION_ID === sessionId ? hostRecordFile(dir, env) : null;
+  return Boolean(file) && !fs.existsSync(file) && fs.existsSync(path.dirname(file));
+}
+
 // True when the app's variables name a record that belongs to another chat:
 // this Claude Code was started inside a desktop chat (from its shell, say)
 // and inherited them, so it isn't a desktop chat itself.
@@ -128,14 +154,12 @@ function inheritedFromAnotherChat(dir, env, sessionId) {
 function findRecord(dir, sessionId, { hint, env }) {
   const root = path.join(dir, SESSIONS);
   const scopeOf = (file) => path.relative(root, path.dirname(file)).split(path.sep).join('/');
-  const named = [];
-  if (hint) named.push(hint);
-  const host = hostRecordFile(dir, env);
-  if (host && env.CLAUDE_CODE_SESSION_ID === sessionId) named.push(host);
-  for (const file of named) {
-    const record = recordFor(file, sessionId);
-    if (record) return { file, record, scope: scopeOf(file) };
+  if (hint) {
+    const record = recordFor(hint, sessionId);
+    if (record) return { file: hint, record, scope: scopeOf(hint) };
   }
+  const host = hostRecord(dir, env, sessionId);
+  if (host) return { ...host, scope: scopeOf(host.file) };
   for (const accountDir of subdirs(root)) {
     for (const orgDir of subdirs(path.join(root, accountDir))) {
       const folder = path.join(root, accountDir, orgDir);
@@ -162,7 +186,9 @@ function lookup(sessionId, { env = process.env, hint } = {}) {
   if (!found) {
     // Inside the app but no record of this chat: the app may have moved its
     // files again. Say so rather than quietly using the folder's rules.
-    if (!isDesktop(env) || inheritedFromAnotherChat(dir, env, sessionId)) return null;
+    if (!isDesktop(env) || inheritedFromAnotherChat(dir, env, sessionId) || recordNotWrittenYet(dir, env, sessionId)) {
+      return null;
+    }
     return {
       recordFile: null,
       configFile: null,

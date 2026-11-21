@@ -83,6 +83,41 @@ test('a Claude Code started inside a desktop chat is not warned about the app', 
   assert.equal(desktop.lookup('nested-session', { env: inherited }), null);
 });
 
+// A new chat: the app has written its record but not yet its Claude Code
+// session ID, or hasn't written the record at all.
+function newChat(t, record) {
+  const w = world(t);
+  const data = path.join(w.base, 'Claude-Data', 'claude_test');
+  desktopChat({ ...w, desktop: data }, { local: 'local_new', title: null, group: 'cg-apps', record });
+  const env = {
+    ...w.env,
+    CC_RULES_DESKTOP_DIR: data,
+    CLAUDE_CODE_ENTRYPOINT: 'claude-desktop',
+    CLAUDE_CODE_SESSION_ID: SESSION,
+    CLAUDE_CODE_HOST_SESSION_ID: 'local_new',
+    CLAUDE_CODE_ACCOUNT_UUID: 'acct',
+    CLAUDE_CODE_ORGANIZATION_UUID: 'org',
+  };
+  return { w, data, env };
+}
+
+test('a new chat whose record has no session ID yet is found, with its group', (t) => {
+  const { w, env } = newChat(t, { cliSessionId: undefined });
+  const state = where(w, { env });
+  assert.deepEqual(state.warnings, []);
+  assert.deepEqual(state.project, { kind: 'group', id: 'cg-apps', name: 'Apps' });
+  // Without the app's variables for this chat, a record with no session ID isn't taken.
+  assert.equal(desktop.lookup(SESSION, { env: { ...env, CLAUDE_CODE_SESSION_ID: 'another' } }).recordFile, null);
+});
+
+test('a new chat whose record the app has not written yet gets no warning', (t) => {
+  const { w, data, env } = newChat(t, {});
+  require('node:fs').rmSync(path.join(data, 'claude-code-sessions', 'acct', 'org', 'local_new.json'));
+  const state = where(w, { env });
+  assert.deepEqual(state.warnings, []);
+  assert.equal(state.project.kind, 'folder');
+});
+
 test('a stale hint from the old location falls back to the search', (t) => {
   const { data, env } = movedApp(t);
   write(path.join(data, 'unrelated.txt'), 'x');

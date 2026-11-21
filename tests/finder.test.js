@@ -195,11 +195,11 @@ test('scan --json gives the panel the rules and where they can go', (t) => {
   const item = data.items.find((i) => i.text === 'One rule here.');
   assert.match(item.id, /^H[0-9a-f]{6}$/);
   assert.deepEqual(item.targets, [
-    { value: 'global', label: 'Global (every chat)' },
-    { value: 'chat', label: 'This chat: Chat' },
+    { value: 'global', label: 'Global (Every Chat)' },
+    { value: 'chat', label: 'This Chat: Chat' },
     { value: 'project', label: 'Project: Apps' },
     { value: 'group:cg-web', label: 'Project: Websites' },
-    { value: 'keep', label: 'Keep it where it is' },
+    { value: 'keep', label: 'Keep It Where It Is' },
   ]);
   assert.equal(item.raw, undefined, 'the panel gets only what it shows');
   const text = cli(w, ['scan']).out;

@@ -31,9 +31,9 @@ const problem = atom({ plugin: 'cc-rules', key: 'problem' } as const, null)
 const hidden = atom({ plugin: 'cc-rules', key: 'hidden' } as const, null)
 
 const HEADINGS: Record<RuleLevel['level'], string> = {
-  global: 'Global · every chat',
+  global: 'Global · Every Chat',
   project: 'Project',
-  chat: 'This chat',
+  chat: 'This Chat',
 }
 
 // Claude Code 2.1.299 added Text's `weight`, `size` and `tabular` and Box's
@@ -171,16 +171,16 @@ function skipped(found: ScanView): string {
 }
 
 function fileLink(level: RuleLevel): string {
-  if (!level.exists) return 'no file yet'
-  return `[open file](${encodeURI(`file:///${level.file.replace(/^\/+/, '')}`)})`
+  if (!level.exists) return 'No File Yet'
+  return `[Open File](${encodeURI(`file:///${level.file.replace(/^\/+/, '')}`)})`
 }
 
 function heading(level: RuleLevel, data: RulesView): string {
   if (level.level === 'project') {
-    const kind = data.project.kind === 'group' ? 'sidebar group' : 'folder'
+    const kind = data.project.kind === 'group' ? 'Sidebar Group' : 'Folder'
     return `Project · ${data.project.name} (${kind})`
   }
-  if (level.level === 'chat' && data.chatTitle) return `This chat · ${data.chatTitle}`
+  if (level.level === 'chat' && data.chatTitle) return `This Chat · ${data.chatTitle}`
   return HEADINGS[level.level]
 }
 
@@ -283,7 +283,7 @@ export const register: Register = (on, options) => {
           <Text dimColor>{trouble ? "Couldn't read the rules." : 'Loading the rules…'}</Text>
           {trouble && <Text color={look.error}>{trouble}</Text>}
           {trouble && <Text dimColor>Check the plugin's Node.js path: claude plugin configure cc-rules@cc-rules</Text>}
-          <Button key="refresh" label="Try again" onPress={() => void refresh($, options)} />
+          <Button key="refresh" label="Try Again" onPress={() => void refresh($, options)} />
         </Box>
       )
     }
@@ -326,16 +326,16 @@ export const register: Register = (on, options) => {
         {trouble && <Text color={look.error}>Couldn't refresh: {trouble}</Text>}
         <Box flexDirection="row" gap={look.rowGap}>
           <Button key="refresh" label="Refresh" onPress={() => void refresh($, options)} />
-          <Button key="find-hidden" label={found ? 'Look again' : 'Find hidden rules'} onPress={() => void findHidden($, options)} />
+          <Button key="find-hidden" label={found ? 'Look Again' : 'Find Hidden Rules'} onPress={() => void findHidden($, options)} />
           {found && (
-            <Button key="hidden-undo" label="Undo last change" onPress={() => void changeHidden($, options, ['undo'])} />
+            <Button key="hidden-undo" label="Undo Last Change" onPress={() => void changeHidden($, options, ['undo'])} />
           )}
         </Box>
 
         {found && (
           <Box key="hidden" flexDirection="column" gap={look.rowGap}>
             <Box flexDirection="row" justifyContent="space-between">
-              <Text {...look.heading}>Hidden rules · {found.items.length} found</Text>
+              <Text {...look.heading}>Hidden Rules · {found.items.length} Found</Text>
               <Button key="hidden-close" label="Close" onPress={() => void update($, hidden, () => null)} />
             </Box>
             <Text dimColor>
@@ -351,7 +351,7 @@ export const register: Register = (on, options) => {
                   <Text {...look.id}>{label}</Text>
                   <Button
                     key={`keep-all-${index}`}
-                    label="Keep all"
+                    label="Keep All"
                     onPress={() =>
                       void changeHidden(
                         $,
@@ -373,8 +373,8 @@ export const register: Register = (on, options) => {
                         key={`assign-${item.id}`}
                         value={CHOOSE}
                         options={[
-                          { key: CHOOSE, value: CHOOSE, label: 'Assign to…' },
-                          ...item.targets.map(t => ({ key: t.value, value: t.value, label: t.label })),
+                          { key: CHOOSE, value: CHOOSE, label: 'Assign To…' },
+                          ...(item.targets ?? []).map(t => ({ key: t.value, value: t.value, label: t.label })),
                         ]}
                         onSelect={value => void assign($, options, item.id, value)}
                       />

@@ -92,7 +92,7 @@ To see the rules without asking, use the **CC Rules panel**. It's a pane in the 
 at all three levels:
 
 ```
-Global · every chat                                   open file
+Global · Every Chat                                   Open File
 ╭──────────────────────────────────────────────────────╮
 │ ●  GR1  Always answer in plain English      [Pause]  │
 ╰──────────────────────────────────────────────────────╯
@@ -100,10 +100,10 @@ Global · every chat                                   open file
 │ ○  GR2  Use British spelling                [Resume] │
 ╰──────────────────────────────────────────────────────╯
 
-Project · Apps (sidebar group)                        no file yet
+Project · Apps (Sidebar Group)                        No File Yet
  No rules yet.
 
-This chat · Fix login bug                             open file
+This Chat · Fix login bug                             Open File
 ╭──────────────────────────────────────────────────────╮
 │ ●  CR1  Keep replies under 200 words        [Pause]  │
 ╰──────────────────────────────────────────────────────╯
@@ -117,7 +117,7 @@ Each rule sits in its own thin box, so long rules that wrap onto several lines s
   Claude's own changes all show within a few seconds.
 - **Pause** and **Resume** switch a rule at a click. Claude is told about the change at your next message, and so
   are you.
-- **open file** opens that level's Markdown file. To add, reword or move a rule, ask Claude (it checks for
+- **Open File** opens that level's Markdown file. To add, reword or move a rule, ask Claude (it checks for
   conflicts first) or edit the file.
 - A status line entry, `CC Rules: 3 active`, shows the count where your Claude Code shows plugin status.
 
@@ -128,7 +128,7 @@ Code mod, which is an early-access feature; if your version doesn't show it, eve
 ## Finding hidden rules
 
 Rules also hide outside CC Rules, where the panel can't show them, and Claude still follows the ones in files it
-loads. **Find hidden rules**, at the bottom of the panel, looks in:
+loads. **Find Hidden Rules**, at the bottom of the panel, looks in:
 
 - Claude Code's own instruction files: `CLAUDE.md`, `CLAUDE.local.md` and `AGENTS.md`, plus `.claude/rules/`. It checks
   your user folder (`~/.claude`), the chat's folder, every folder above it, and folders up to three levels below it.
@@ -143,24 +143,24 @@ the hard way" or "Architecture" don't, because notes on how a program works usua
 
 A rule CC Rules already has (the same words, at any level, in any project or chat) isn't listed.
 
-Each rule found shows its file, line and heading, an **Assign to…** list and a **Remove** button. Picking from the
+Each rule found shows its file, line and heading, an **Assign To…** list and a **Remove** button. Picking from the
 list sends the rule there at once and takes it out of its file:
 
-- **Global (every chat)**
-- **The project it was written for**: the sidebar group of the program it belongs to, marked *suggested*
-- **The chat it was written for**: that program's own chat, also *suggested*
-- **This chat**
+- **Global (Every Chat)**
+- **The project it was written for**: the sidebar group of the program it belongs to, marked *Suggested*
+- **The chat it was written for**: that program's own chat, also *Suggested*
+- **This Chat**
 - **Any other project**
-- **Keep it where it is**: leaves it and stops listing it. **Keep all** does that for every rule found in one file.
+- **Keep It Where It Is**: leaves it and stops listing it. **Keep All** does that for every rule found in one file.
 
 To suggest a project and chat, CC Rules works out which program a rule belongs to: from a heading such as "Project:
 Benchdrop", the folder its `CLAUDE.md` sits in, or the program a memory note was saved for. It then finds the desktop
 chats with that program's name or folder. A chat named exactly that wins over one that only contains it, and a long
 name one or two letters off (a typo) still matches. A rule under a "Global" heading, or in your own `~/.claude`, gets
-Global marked *suggested*. **Remove** takes the rule out of its file without adding it anywhere.
+Global marked *Suggested*. **Remove** takes the rule out of its file without adding it anywhere.
 
-Once the list is up, **Find hidden rules** becomes **Look again**, and **Undo last change** appears beside it. Every move
-and removal backs up the file first, in `~/.claude/cc-rules/.backups/`. **Undo last change** puts the latest one back, including taking a moved rule back out of CC Rules. A memory note that's moved or removed goes into the
+Once the list is up, **Find Hidden Rules** becomes **Look Again**, and **Undo Last Change** appears beside it. Every move
+and removal backs up the file first, in `~/.claude/cc-rules/.backups/`. **Undo Last Change** puts the latest one back, including taking a moved rule back out of CC Rules. A memory note that's moved or removed goes into the
 backup along with its line in `MEMORY.md`. You can also ask Claude: "find my hidden rules".
 
 ## Making and changing rules
@@ -327,14 +327,14 @@ It reads:
 - its own rule files in `~/.claude/cc-rules/`, and `.claude/cc-rules/PROJECT.md` in a chat's folder
 - the desktop app's settings file and its record of each Code chat, for the chat's name and sidebar group
 - the chat's transcript, only for the newest chat name Claude Code recorded there
-- when you use **Find hidden rules**: `CLAUDE.md`, `CLAUDE.local.md`, `AGENTS.md` and `.claude/rules/` in your user
+- when you use **Find Hidden Rules**: `CLAUDE.md`, `CLAUDE.local.md`, `AGENTS.md` and `.claude/rules/` in your user
   folder, the chat's folder, the folders above it and up to three levels below it; Claude's memory notes in
   `~/.claude/projects/*/memory/`; Markdown files with "rules" in the name; and files left over from Chat Rules
 
 It writes to `~/.claude/cc-rules/` (rule files, `.state/` with what Claude was last told in each chat,
 and `.backups/`), and to `.claude/cc-rules/PROJECT.md` when you add a folder project rule. It changes a file anywhere
 else only when you move or remove a hidden rule: it backs the file up first, then takes the rule's line out (a memory
-note moves into the backup), and **Undo last change** puts it back. The panel also remembers whether you closed it,
+note moves into the backup), and **Undo Last Change** puts it back. The panel also remembers whether you closed it,
 in Claude Code's own plugin storage.
 
 ## Limits

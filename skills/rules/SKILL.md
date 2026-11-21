@@ -119,7 +119,7 @@ and old Chat Rules files. When the user asks to find or tidy up those rules:
 4. Run `adopt <ID> --to global|project|chat|group:<name>|session:<id>`, `clean <ID>` or `keep <ID>...`, and echo each
    line it prints. Every adopt and clean backs up the file first, and `undo` puts back the latest one.
 
-The panel's **Find hidden rules** button does the same with buttons.
+The panel's **Find Hidden Rules** button does the same with buttons.
 
 ## The user's request
 

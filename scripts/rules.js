@@ -143,19 +143,19 @@ function itemTargets(item, where, chats) {
   const hint = finder.suggest(item, where, chats);
   const own = where.project;
   const groupValue = (g) => (own.kind === 'group' && own.id === g.id ? 'project' : `group:${g.id}`);
-  const targets = [{ value: 'global', label: `Global (every chat)${hint.global ? ' · suggested' : ''}` }];
+  const targets = [{ value: 'global', label: `Global (Every Chat)${hint.global ? ' · Suggested' : ''}` }];
   const listed = new Set();
   for (const group of hint.groups) {
     listed.add(groupValue(group));
-    targets.push({ value: groupValue(group), label: `Project: ${group.name} · suggested` });
+    targets.push({ value: groupValue(group), label: `Project: ${group.name} · Suggested` });
   }
   for (const chat of hint.chats) {
-    targets.push({ value: `session:${chat.sessionId}`, label: `Chat: ${chat.title || 'untitled'} · suggested` });
+    targets.push({ value: `session:${chat.sessionId}`, label: `Chat: ${chat.title || 'Untitled'} · Suggested` });
   }
-  if (where.sessionId) targets.push({ value: 'chat', label: `This chat${where.chatTitle ? `: ${where.chatTitle}` : ''}` });
+  if (where.sessionId) targets.push({ value: 'chat', label: `This Chat${where.chatTitle ? `: ${where.chatTitle}` : ''}` });
   if (!listed.has('project')) {
     listed.add('project');
-    targets.push({ value: 'project', label: `Project: ${own.name}${own.kind === 'folder' ? ' (folder)' : ''}` });
+    targets.push({ value: 'project', label: `Project: ${own.name}${own.kind === 'folder' ? ' (Folder)' : ''}` });
   }
   for (const group of where.groups) {
     if (!listed.has(groupValue(group))) {
@@ -163,7 +163,7 @@ function itemTargets(item, where, chats) {
       targets.push({ value: groupValue(group), label: `Project: ${group.name}` });
     }
   }
-  targets.push({ value: 'keep', label: 'Keep it where it is' });
+  targets.push({ value: 'keep', label: 'Keep It Where It Is' });
   return targets;
 }
 
@@ -201,9 +201,9 @@ function scanText(found) {
     }
     const under = item.section ? `, under "${item.section}"` : '';
     out.push(`- ${item.id} (line ${item.line}${under}): ${item.text}`);
-    const suggested = item.targets.filter((t) => t.label.endsWith(' · suggested'));
+    const suggested = item.targets.filter((t) => t.label.endsWith(' · Suggested'));
     if (suggested.length) {
-      out.push(`  suggested: ${suggested.map((t) => `${t.value} (${t.label.replace(' · suggested', '')})`).join(', ')}`);
+      out.push(`  suggested: ${suggested.map((t) => `${t.value} (${t.label.replace(' · Suggested', '')})`).join(', ')}`);
     }
   }
   out.push(

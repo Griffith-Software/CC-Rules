@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.1.1 (2026-11-21)
+
+- **New icon**: a checklist page with an orange settings gear, on purple.
+- **Panel labels in title case**: headings (Global · Every Chat, This Chat, Project · … (Sidebar Group)), Open File,
+  No File Yet, and the buttons Find Hidden Rules, Look Again, Undo Last Change, Keep All and Try Again. The Assign
+  To… list reads Global (Every Chat), This Chat, · Suggested, (Folder) and Keep It Where It Is. Chat and project names
+  keep their own casing.
+- Panel: a hidden-rules list saved by an older version, whose entries have no Assign To… choices, draws them with an
+  empty list instead of failing to draw.
+- **Fixed: a brand-new desktop chat was warned that CC Rules couldn't find its record**, and used its folder's project
+  rules until the next message. The app writes a new chat's record a moment before it adds the chat's Claude Code
+  session ID. CC Rules now takes the record the app names for the chat, and a record that isn't written yet is no
+  longer reported as the app having moved its files.
+
 ## 1.1.0 (2026-10-28)
 
 - **Each level numbers its own rules.** IDs now show the level: GR1, GR2... for global rules, PR1, PR2... for

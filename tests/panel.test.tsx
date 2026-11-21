@@ -55,12 +55,12 @@ function world(on: On) {
 }
 
 const TARGETS = [
-  { value: 'global', label: 'Global (every chat)' },
-  { value: 'group:cg-web', label: 'Project: Websites · suggested' },
-  { value: 'session:site-chat', label: 'Chat: Site · suggested' },
-  { value: 'chat', label: 'This chat: Fix login bug' },
+  { value: 'global', label: 'Global (Every Chat)' },
+  { value: 'group:cg-web', label: 'Project: Websites · Suggested' },
+  { value: 'session:site-chat', label: 'Chat: Site · Suggested' },
+  { value: 'chat', label: 'This Chat: Fix login bug' },
   { value: 'project', label: 'Project: Apps' },
-  { value: 'keep', label: 'Keep it where it is' },
+  { value: 'keep', label: 'Keep It Where It Is' },
 ]
 
 const SCAN = {
@@ -92,9 +92,9 @@ test('the panel shows all three levels on every surface that docks it', async ($
   await $.command.run({ command: 'rules', args: '' })
   for (const surface of ['desktop', 'terminal'] as const) {
     const ui = await $.ui.mount({ plugin: 'cc-rules', surface, ...PANE })
-    expect(await ui.find({ text: 'Global · every chat' })).toBeDefined()
-    expect(await ui.find({ text: 'Project · Apps (sidebar group)' })).toBeDefined()
-    expect(await ui.find({ text: 'This chat · Fix login bug' })).toBeDefined()
+    expect(await ui.find({ text: 'Global · Every Chat' })).toBeDefined()
+    expect(await ui.find({ text: 'Project · Apps (Sidebar Group)' })).toBeDefined()
+    expect(await ui.find({ text: 'This Chat · Fix login bug' })).toBeDefined()
     expect(await ui.find({ text: 'Always answer in plain English' })).toBeDefined()
     expect(await ui.find({ text: 'No rules yet.' })).toBeDefined()
     expect((await ui.find({ key: 'toggle-GR1' }))?.text).toBe('Pause')
@@ -128,27 +128,27 @@ test('Find hidden rules lists them by file, each with its own list and a Remove 
   await $.command.run({ command: 'rules', args: '' })
   const ui = await $.ui.mount({ plugin: 'cc-rules', surface: 'desktop', ...PANE })
   expect(await ui.find({ key: 'assign-H111111' })).toBeUndefined()
-  expect((await ui.find({ key: 'find-hidden' }))?.text).toBe('Find hidden rules')
+  expect((await ui.find({ key: 'find-hidden' }))?.text).toBe('Find Hidden Rules')
   expect(await ui.find({ key: 'hidden-undo' })).toBeUndefined()
   await ui.press({ key: 'find-hidden' })
-  expect((await ui.find({ key: 'find-hidden' }))?.text).toBe('Look again')
-  expect((await ui.find({ key: 'hidden-undo' }))?.text).toBe('Undo last change')
+  expect((await ui.find({ key: 'find-hidden' }))?.text).toBe('Look Again')
+  expect((await ui.find({ key: 'hidden-undo' }))?.text).toBe('Undo Last Change')
   expect(await ui.find({ key: 'hidden-rescan' })).toBeUndefined()
   expect(runs.at(-1)).toEqual(expect.arrayContaining(['scan', '--json', '--no-snapshot']))
-  expect(await ui.find({ text: 'Hidden rules · 3 found' })).toBeDefined()
+  expect(await ui.find({ text: 'Hidden Rules · 3 Found' })).toBeDefined()
   expect(await ui.find({ text: 'Not listed: 1 already in CC Rules · 2 kept where they are.' })).toBeDefined()
   expect(await ui.find({ text: 'notes/RULES-EXPORT.md' })).toBeDefined()
   expect(await ui.find({ text: 'under "Global (every chat)" · line 5' })).toBeDefined()
   const list = await ui.find({ key: 'assign-H333333' })
   expect(list?.type).toBe('Select')
   expect((list?.props.options as { label: string }[]).map(o => o.label)).toEqual([
-    'Assign to…',
-    'Global (every chat)',
-    'Project: Websites · suggested',
-    'Chat: Site · suggested',
-    'This chat: Fix login bug',
+    'Assign To…',
+    'Global (Every Chat)',
+    'Project: Websites · Suggested',
+    'Chat: Site · Suggested',
+    'This Chat: Fix login bug',
     'Project: Apps',
-    'Keep it where it is',
+    'Keep It Where It Is',
   ])
   expect((await ui.find({ key: 'remove-H333333' }))?.text).toBe('Remove')
   expect((await ui.find({ key: 'hidden-H333333' }))?.props.borderStyle).toBe('round')
@@ -204,7 +204,7 @@ async function startedOn(version: string, $: Parameters<Parameters<typeof test>[
 
 test('on Claude Code 2.1.299 and later the panel uses the new text styles', async ($, on) => {
   const ui = await startedOn('2.1.308', $, on)
-  const heading = await ui.find({ type: 'Text', text: 'Global · every chat' })
+  const heading = await ui.find({ type: 'Text', text: 'Global · Every Chat' })
   // The engine reads weight and bold as one, so the heading size tells them apart.
   expect(heading?.props.size).toBe('heading')
   expect(heading?.props.weight).toBe('semibold')
@@ -214,7 +214,7 @@ test('on Claude Code 2.1.299 and later the panel uses the new text styles', asyn
 
 test('on an older Claude Code the panel falls back to bold, which it still knows', async ($, on) => {
   const ui = await startedOn('2.1.287', $, on)
-  const heading = await ui.find({ type: 'Text', text: 'Global · every chat' })
+  const heading = await ui.find({ type: 'Text', text: 'Global · Every Chat' })
   expect(heading?.props.bold).toBe(true)
   expect(heading?.props.size).toBeUndefined()
   // Spacing steps are 2.1.299's too, so the box padding is in cells.
@@ -231,7 +231,7 @@ test('a hidden-rules list from before a reload is dropped, so the panel still dr
   await ui.unmount()
   await $.session.start({ cwd: 'C:/Projects/Site', surface: 'desktop', isInteractive: true })
   const again = await $.ui.mount({ plugin: 'cc-rules', surface: 'desktop', ...PANE })
-  expect(await again.find({ text: 'Global · every chat' })).toBeDefined()
+  expect(await again.find({ text: 'Global · Every Chat' })).toBeDefined()
   expect(await again.find({ key: 'find-hidden' })).toBeDefined()
   expect(await again.find({ key: 'hidden-close' })).toBeUndefined()
   await again.unmount()
@@ -261,6 +261,6 @@ test('a failing rules tool shows the problem and a way to retry', async ($, on) 
   const ui = await $.ui.mount({ plugin: 'cc-rules', surface: 'desktop', ...PANE })
   expect(await ui.find({ text: "Couldn't read the rules." })).toBeDefined()
   expect(await ui.find({ text: 'Error: node not found' })).toBeDefined()
-  expect((await ui.find({ key: 'refresh' }))?.text).toBe('Try again')
+  expect((await ui.find({ key: 'refresh' }))?.text).toBe('Try Again')
   await ui.unmount()
 })
