@@ -26,6 +26,13 @@ global, PR for project, CR for this chat. When a rule is removed or moved, the r
 moved rule takes the next ID at its new level. So use the IDs from the latest `list` or rules context. An ID with no
 level letters (`R3` or `3`) means a global rule. IDs from before CC Rules 1.1.0 looked like `R3` at every level.
 
+**Rule numbers in saved text.** Numbers move, so text kept for later can point at the wrong rule:
+- When you write a rule's number into anything kept for later (a handoff, a WEBSITE.md, a memory note, docs, a commit
+  message), give its short wording too, for example "per GR11 (title case)".
+- When saved text cites a rule number and the wording beside it doesn't fit the current rule, or the text may be older
+  than the last renumbering, run `history <ID>`. It lists every rule that has had that number, with dates, and what
+  each one is now. Go by the rule the text meant, and tell the user if it has since been removed or changed.
+
 ## Running the tool
 
 Make every change with the CC Rules tool. Don't edit the rule files with Write or Edit. The tool re-reads
@@ -67,6 +74,8 @@ In PowerShell, start the command line with `& ` and pass the text as `--text 'Al
 | "resume GR3", "turn GR3 back on" | `resume GR3` |
 | "make CR3 global", "make CR3 a project rule", "move PR3 to this chat" | `move CR3 --to global`, `--to project` or `--to chat` |
 | "reload the rules", "I edited the file" | `list` |
+| "what was GR9?", "which rule did that note mean?" | `history GR9` |
+| "what changed in my rules?", "rules history" | `history` |
 | "find hidden rules", "tidy up my rules", "what rules are in my CLAUDE.md files?" | `scan`, then see Finding hidden rules |
 
 `pause`, `resume`, `remove` and `move` accept several IDs at once. Pass them as the user saw them: `remove` and `move`

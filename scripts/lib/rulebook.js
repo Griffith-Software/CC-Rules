@@ -20,6 +20,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { RulesError, checkSessionId } = require('./where');
+const history = require('./history');
 
 const LEVELS = ['global', 'project', 'chat']; // highest first
 const GLOBAL_FILE = 'GLOBAL.md';
@@ -353,7 +354,18 @@ function load(where, { hints = {} } = {}) {
   openDocs(state, hints);
   syncNames(state);
   repair(state);
+  remember(state);
   return state;
+}
+
+// Adds what changed since last time to the rules history (history.js). A
+// history that can't be written never stops the rules loading.
+function remember(state) {
+  try {
+    history.record(state);
+  } catch (err) {
+    state.notices.push(`Couldn't update the rules history: ${err.message}`);
+  }
 }
 
 function docs(state) {
@@ -775,6 +787,10 @@ function contextText(state, commandPrefix) {
     'a rule, or to reload the rules.',
   );
   if (commandPrefix) out.push('Its command line for this chat is:', `  ${commandPrefix} <command> ...`);
+  out.push(
+    'Rule numbers move up when a rule before them is removed or moved. When saved text (a handoff, a note,',
+    'a WEBSITE.md) cites a rule number, `history <ID>` says which rule it meant and what that rule is now.',
+  );
   if (state.notices.length) {
     out.push('', 'Changes made while loading (the user was shown these):');
     for (const notice of state.notices) out.push(`- ${notice}`);
@@ -785,6 +801,8 @@ function contextText(state, commandPrefix) {
 module.exports = {
   parse,
   load,
+  remember,
+  normaliseId,
   allRules,
   fileName,
   addRule,

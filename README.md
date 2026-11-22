@@ -188,6 +188,26 @@ asks which wins: keep the old rule, or use the new one and pause or remove the o
 level order matters: a new chat rule can't beat an active global rule, and pausing a global rule affects every chat.
 Exact duplicates are refused outright, with a pointer to the existing rule.
 
+## History
+
+CC Rules keeps a record of every change to your rules: added, edited, paused, resumed, removed, moved and renumbered,
+whether Claude made it, the panel did or you edited a file by hand. It lives in `~/.claude/cc-rules/history.jsonl`
+and starts the first time CC Rules reads your rules after you install 1.2.0.
+
+It's there for rule numbers written down before the numbers moved. If a handoff or a note says "per GR9", ask Claude
+"which rule did GR9 mean?" or run `history GR9`:
+
+```
+GR9 in global rules:
+- from the start of history (2026-11-22 09:15) until 2026-11-22 10:02: "Ask before deleting any file."
+  Now GR8 in global rules: "Ask before deleting any file."
+- from 2026-11-22 10:02 to now: "Keep replies under 200 words." (it was GR10 before)
+```
+
+`history` on its own lists the latest changes. When Claude writes a rule number into something kept for later, it
+gives the rule's short wording too ("per GR11 (title case)"), so the reference still makes sense after the numbers
+move.
+
 ## Editing the files by hand
 
 - One rule per checklist line: `- [x] GR3: text`. Also accepted: `*` or `+` bullets, `[X]`, `[]` (paused), `GR3 -`,
@@ -282,6 +302,7 @@ node scripts/rules.js [--root DIR] [--session ID] <command> [args]
   pause <ID>...                 switch rules off (the line stays, unchecked)
   resume <ID>...                switch rules back on
   move <ID>... --to global|project|chat
+  history [ID]                  the latest changes, or every rule that has had that ID
   context                       the text Claude gets when a chat starts
 
   scan                          list hidden rules, each with an ID like H1a2b3c
@@ -313,6 +334,7 @@ every ID before changing anything, so `remove GR2 GR5` removes the two rules you
 | `scripts/lib/desktop.js` | finds the desktop app's data folder and reads the chat's name and sidebar group from it |
 | `scripts/lib/rulebook.js` | parsing, IDs, renames and line-by-line rewrites |
 | `scripts/lib/snapshot.js` | remembers what Claude was last told, in `~/.claude/cc-rules/.state/` |
+| `scripts/lib/history.js` | the record of every change, and which rule an old number meant |
 | `scripts/lib/finder.js` | finds hidden rules, and moves, removes, keeps and undoes them, with backups in `.backups/` |
 
 A rule's ID is worked out from its level and its place in the file each time the file is read, so there's no counter
@@ -331,7 +353,8 @@ It reads:
   folder, the chat's folder, the folders above it and up to three levels below it; Claude's memory notes in
   `~/.claude/projects/*/memory/`; Markdown files with "rules" in the name; and files left over from Chat Rules
 
-It writes to `~/.claude/cc-rules/` (rule files, `.state/` with what Claude was last told in each chat,
+It writes to `~/.claude/cc-rules/` (rule files, `history.jsonl` and `history-state.json` with the record of changes to
+your rules, `.state/` with what Claude was last told in each chat,
 and `.backups/`), and to `.claude/cc-rules/PROJECT.md` when you add a folder project rule. It changes a file anywhere
 else only when you move or remove a hidden rule: it backs the file up first, then takes the rule's line out (a memory
 note moves into the backup), and **Undo Last Change** puts it back. The panel also remembers whether you closed it,

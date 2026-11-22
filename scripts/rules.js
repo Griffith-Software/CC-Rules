@@ -12,6 +12,7 @@ const rulebook = require('./lib/rulebook');
 const snapshot = require('./lib/snapshot');
 const finder = require('./lib/finder');
 const desktop = require('./lib/desktop');
+const history = require('./lib/history');
 
 const HELP = `CC Rules: rules you can see and edit, at three levels.
   global   every chat                      (highest: wins any conflict)
@@ -31,6 +32,7 @@ Commands:
   pause <ID>...                 switch rules off (the line stays, unchecked)
   resume <ID>...                switch rules back on
   move <ID>... --to global|project|chat
+  history [ID]                  the latest changes, or every rule that has had that ID
   context                       the text Claude gets when a chat starts
 
 IDs show the level and the rule's place in its file: GR3 is the third global
@@ -304,6 +306,7 @@ function run(argv, env = process.env) {
       output = finder.adopt(where, env, id, (text) => {
         const into = target.where === where ? state : rulebook.load(target.where);
         let message = rulebook.addRule(into, { level: target.level, text });
+        if (into !== state) rulebook.remember(into);
         // Another chat's rules are "this chat" to that chat; name it here.
         if (otherChat) message = message.replace(/ (to|in) this chat/, ` $1 chat "${target.where.chatTitle || 'untitled'}"`);
         const doc = target.level === 'global' ? into.global : target.level === 'project' ? into.project : into.chat;
@@ -317,6 +320,12 @@ function run(argv, env = process.env) {
     case 'keep':
       output = needIds(rest, 'keep', 'H1a2b3c').map((id) => finder.keep(where, env, id)).join('\n');
       break;
+    case 'history': {
+      // "history" lists the latest changes; "history GR9" every rule that has been GR9.
+      const [id] = rest;
+      output = id ? history.idText(where.home, where, rulebook.normaliseId(id)) : history.recentText(where.home);
+      break;
+    }
     case 'undo':
       output = finder.undo(where, rulebook.removeFromFile);
       state = rulebook.load(where);
@@ -324,6 +333,7 @@ function run(argv, env = process.env) {
     default:
       throw new RulesError(`Unknown command "${command}". Run with --help for usage.`);
   }
+  rulebook.remember(state);
   // Claude has now seen the current rules, so the check before the next
   // message doesn't need to repeat them. Not so for the panel's calls: Claude
   // hasn't seen those, so the check must still tell it.

@@ -245,7 +245,7 @@ test('load still works when new IDs cannot be saved', (t) => {
   });
   const state = load(w);
   assert.equal(state.global.rules[0].id, 'GR1');
-  assert.equal(state.notices.at(-1), "Couldn't save GLOBAL.md: disk is read-only");
+  assert.ok(state.notices.includes("Couldn't save GLOBAL.md: disk is read-only"));
 });
 
 test('load reports bullets that are not checklist lines', (t) => {

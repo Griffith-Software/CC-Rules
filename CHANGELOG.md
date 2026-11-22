@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.2.0 (2026-11-22)
+
+- **History.** CC Rules keeps a record of every change to your rules in `~/.claude/cc-rules/history.jsonl`: added,
+  edited, paused, resumed, removed, moved and renumbered, whether Claude, the panel or a hand edit made it. It starts
+  the first time CC Rules reads your rules after the update.
+- **`history GR9`** (or "which rule did GR9 mean?") lists every rule that has had that number, with dates, and what
+  each one is now, so a rule number in an older handoff or note can still be followed after the numbers move.
+  `history` on its own lists the latest changes.
+- When Claude writes a rule number into something kept for later, it gives the rule's short wording too, for example
+  "per GR11 (title case)".
+
 ## 1.1.1 (2026-11-21)
 
 - **New icon**: a checklist page with an orange settings gear, on purple.
